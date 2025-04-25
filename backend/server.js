@@ -244,6 +244,50 @@ async function startServer() {
       res.json(req.user);
     });
 
+    // Meditation routes
+    // Get all meditations
+    app.get('/api/meditations', async (req, res) => {
+      try {
+        // Mock meditation data since we don't have a proper model
+        const meditations = [
+          {
+            _id: '1',
+            title: 'Breathing Meditation',
+            description: 'Focus on your breath to calm your mind and body.',
+            duration: 5
+          },
+          {
+            _id: '2',
+            title: 'Body Scan',
+            description: 'Gradually focus your attention on different parts of your body.',
+            duration: 10
+          },
+          {
+            _id: '3',
+            title: 'Loving-Kindness Meditation',
+            description: 'Develop feelings of goodwill, kindness, and warmth towards others.',
+            duration: 15
+          }
+        ];
+        res.json(meditations);
+      } catch (err) {
+        console.error('Error fetching meditations:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    // Start meditation session
+    app.post('/api/meditations/:id/start', auth, async (req, res) => {
+      try {
+        // Here we would normally log the session to a database
+        // but for now we'll just return success
+        res.json({ message: 'Meditation session started' });
+      } catch (err) {
+        console.error('Error starting meditation:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
     // Mood routes
     // Get all moods for current user
     app.get('/api/mood', auth, async (req, res) => {

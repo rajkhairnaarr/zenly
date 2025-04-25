@@ -70,8 +70,11 @@ const MeditationLibrary = () => {
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
       await axios.post(`http://localhost:${backendPort}/api/meditations/${meditationId}/start`);
+      alert(`Starting meditation session. Take a deep breath and relax.`);
     } catch (err) {
       console.error('Error starting meditation:', err);
+      // Provide fallback behavior when backend is not available
+      alert(`Starting meditation session. Take a deep breath and relax.`);
     }
   };
 

@@ -8,6 +8,7 @@ const MoodTracker = () => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     mood: '',
+    intensity: 5,
     activities: [],
     notes: '',
   });
@@ -34,7 +35,7 @@ const MoodTracker = () => {
   const fetchMoods = async () => {
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
-      const res = await axios.get(`http://localhost:${backendPort}/api/moods`);
+      const res = await axios.get(`http://localhost:${backendPort}/api/mood`);
       setMoods(res.data);
     } catch (err) {
       console.error('Error fetching moods:', err);
@@ -89,21 +90,27 @@ const MoodTracker = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.mood) return;
+    
+    // Set intensity based on mood if not already set
+    const moodData = {
+      ...formData,
+      intensity: formData.intensity || getMoodValue(formData.mood) * 3
+    };
 
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
-      await axios.post(`http://localhost:${backendPort}/api/moods`, formData);
+      await axios.post(`http://localhost:${backendPort}/api/mood`, moodData);
       fetchMoods();
-      setFormData({ mood: '', activities: [], notes: '' });
+      setFormData({ mood: '', intensity: 5, activities: [], notes: '' });
     } catch (err) {
       console.error('Error submitting mood:', err);
       // Add mock entry for demonstration
       setMoods([...moods, {
         _id: `mock-${Date.now()}`,
-        ...formData,
+        ...moodData,
         createdAt: new Date().toISOString(),
       }]);
-      setFormData({ mood: '', activities: [], notes: '' });
+      setFormData({ mood: '', intensity: 5, activities: [], notes: '' });
     }
   };
 
