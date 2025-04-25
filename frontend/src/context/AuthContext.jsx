@@ -3,19 +3,23 @@ import axios from 'axios';
 
 export const AuthContext = createContext();
 
+// Define the backend API URL
+const API_BASE_URL = 'https://zenly-backend.vercel.app/api';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isGuest, setIsGuest] = useState(localStorage.getItem('isGuest') === 'true');
+  const [backendError, setBackendError] = useState(false);
   // Use ref to track API request status
   const pendingRequests = useRef({});
   const requestTimeouts = useRef({});
 
   // Set up axios defaults
   useEffect(() => {
-    // Use relative URL which will go through the Vite proxy in development
-    axios.defaults.baseURL = '/api';
+    // Set the base URL for all axios requests
+    axios.defaults.baseURL = API_BASE_URL;
     
     // Add request interceptor to prevent duplicate requests causing freezing
     axios.interceptors.request.use(
@@ -84,6 +88,11 @@ export const AuthProvider = ({ children }) => {
           }
         }
         
+        // Don't log cancellation errors
+        if (!axios.isCancel(error)) {
+           console.error('Axios Response Error:', error);
+        }
+        
         return Promise.reject(error);
       }
     );
@@ -112,34 +121,29 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     } else if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      loadUser();
+      loadUser(0);
     } else {
       setLoading(false);
     }
   }, []); // Only run on mount
 
-  // Load user data with retry logic
+  // Load user data with retry logic and permanent fix for infinite loop
   const loadUser = async (retryCount = 0) => {
     try {
       const res = await axios.get('/auth/me');
       setUser(res.data);
+      setBackendError(false);
     } catch (err) {
-      console.error('Error loading user:', err);
-      // Don't remove token or show error if backend is not available
       if (err.code === 'ERR_NETWORK') {
-        console.log('Backend server not available, continuing in offline mode');
-        
-        // Retry up to 3 times with exponential backoff
-        if (retryCount < 3) {
+        if (retryCount < 5) {
           const delay = Math.pow(2, retryCount) * 1000;
-          console.log(`Retrying in ${delay}ms...`);
-          
           setTimeout(() => {
             loadUser(retryCount + 1);
           }, delay);
-          
-          // Don't set loading to false yet
           return;
+        } else {
+          setBackendError(true);
+          setError('Unable to connect to backend after several attempts. Please check your connection or try again later.');
         }
       } else {
         localStorage.removeItem('token');
@@ -184,7 +188,7 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post('/auth/register', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      await loadUser();
+      await loadUser(0);
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -204,7 +208,7 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post('/auth/login', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      await loadUser();
+      await loadUser(0);
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -224,6 +228,7 @@ export const AuthProvider = ({ children }) => {
   // Clear error
   const clearError = () => {
     setError(null);
+    setBackendError(false);
   };
 
   return (
@@ -237,7 +242,9 @@ export const AuthProvider = ({ children }) => {
         logout,
         clearError,
         guestLogin,
-        isGuest
+        isGuest,
+        backendError,
+        retryBackend: () => { setLoading(true); loadUser(0); }
       }}
     >
       {children}
