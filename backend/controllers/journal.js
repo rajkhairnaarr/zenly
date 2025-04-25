@@ -5,10 +5,47 @@ const Journal = require('../models/Journal');
 // @access  Private
 exports.getJournals = async (req, res) => {
   try {
-    const journals = await Journal.find({ user: req.user._id }).sort('-createdAt');
-    res.json(journals);
+    // Add pagination with defaults
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // Create a query to allow filtering
+    const query = { user: req.user._id };
+    
+    // Add tag filtering if requested
+    if (req.query.tag) {
+      query.tags = { $in: [req.query.tag] };
+    }
+    
+    // Add mood filtering if requested
+    if (req.query.mood) {
+      query.mood = req.query.mood;
+    }
+
+    const journals = await Journal.find(query)
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit)
+      .select('-__v'); // Exclude version field
+
+    // Get total count for pagination
+    const total = await Journal.countDocuments(query);
+    
+    res.json({
+      success: true,
+      count: journals.length,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: journals
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error fetching journals:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while fetching journals' 
+    });
   }
 };
 
@@ -17,19 +54,33 @@ exports.getJournals = async (req, res) => {
 // @access  Private
 exports.getJournal = async (req, res) => {
   try {
-    const journal = await Journal.findById(req.params.id);
+    const journal = await Journal.findById(req.params.id).select('-__v');
+    
     if (!journal) {
-      return res.status(404).json({ message: 'Journal entry not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Journal entry not found' 
+      });
     }
 
     // Make sure user owns the journal entry
     if (journal.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized to access this journal entry' 
+      });
     }
 
-    res.json(journal);
+    res.json({
+      success: true,
+      data: journal
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error fetching journal:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while fetching journal entry' 
+    });
   }
 };
 
@@ -42,9 +93,27 @@ exports.createJournal = async (req, res) => {
       ...req.body,
       user: req.user._id,
     });
-    res.status(201).json(journal);
+    
+    res.status(201).json({
+      success: true,
+      data: journal
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating journal:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while creating journal entry' 
+    });
   }
 };
 
@@ -53,24 +122,62 @@ exports.createJournal = async (req, res) => {
 // @access  Private
 exports.updateJournal = async (req, res) => {
   try {
-    const journal = await Journal.findById(req.params.id);
+    let journal = await Journal.findById(req.params.id);
+    
     if (!journal) {
-      return res.status(404).json({ message: 'Journal entry not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Journal entry not found' 
+      });
     }
 
     // Make sure user owns the journal entry
     if (journal.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized to update this journal entry' 
+      });
     }
 
-    const updatedJournal = await Journal.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    // Update only allowed fields
+    const { title, content, mood, tags, isPrivate } = req.body;
+    const updatedFields = {};
+    
+    if (title !== undefined) updatedFields.title = title;
+    if (content !== undefined) updatedFields.content = content;
+    if (mood !== undefined) updatedFields.mood = mood;
+    if (tags !== undefined) updatedFields.tags = tags;
+    if (isPrivate !== undefined) updatedFields.isPrivate = isPrivate;
 
-    res.json(updatedJournal);
+    journal = await Journal.findByIdAndUpdate(
+      req.params.id, 
+      updatedFields, 
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).select('-__v');
+
+    res.json({
+      success: true,
+      data: journal
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating journal:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while updating journal entry' 
+    });
   }
 };
 
@@ -80,18 +187,34 @@ exports.updateJournal = async (req, res) => {
 exports.deleteJournal = async (req, res) => {
   try {
     const journal = await Journal.findById(req.params.id);
+    
     if (!journal) {
-      return res.status(404).json({ message: 'Journal entry not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Journal entry not found' 
+      });
     }
 
     // Make sure user owns the journal entry
     if (journal.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized to delete this journal entry' 
+      });
     }
 
-    await journal.remove();
-    res.json({ message: 'Journal entry removed' });
+    // Use findByIdAndDelete instead of remove() which is deprecated
+    await Journal.findByIdAndDelete(req.params.id);
+    
+    res.json({ 
+      success: true,
+      message: 'Journal entry removed successfully' 
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error deleting journal:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while deleting journal entry' 
+    });
   }
 }; 
