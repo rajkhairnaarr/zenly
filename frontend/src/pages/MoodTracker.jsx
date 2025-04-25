@@ -12,11 +12,13 @@ const MoodTracker = () => {
     activities: [],
     notes: '',
   });
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [viewMode, setViewMode] = useState('week'); // 'week' or 'month'
 
   const moodOptions = [
-    { value: 'happy', label: 'Happy', icon: FaceSmileIcon, emoji: '😊' },
-    { value: 'neutral', label: 'Neutral', icon: MinusCircleIcon, emoji: '😐' },
-    { value: 'sad', label: 'Sad', icon: FaceFrownIcon, emoji: '😔' },
+    { value: 'happy', label: 'Happy', icon: FaceSmileIcon, emoji: '😊', color: '#4ADE80' },
+    { value: 'neutral', label: 'Neutral', icon: MinusCircleIcon, emoji: '😐', color: '#FBBF24' },
+    { value: 'sad', label: 'Sad', icon: FaceFrownIcon, emoji: '😔', color: '#F87171' },
   ];
 
   const activityOptions = [
@@ -39,7 +41,7 @@ const MoodTracker = () => {
       setMoods(res.data);
     } catch (err) {
       console.error('Error fetching moods:', err);
-      // Generate mock data for the last 7 days
+      // Generate mock data for the last 30 days
       const mockData = generateMockData();
       setMoods(mockData);
     } finally {
@@ -51,15 +53,16 @@ const MoodTracker = () => {
     const mockMoods = [];
     const moodValues = ['happy', 'neutral', 'sad'];
     
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       
       mockMoods.push({
         _id: `mock-${i}`,
         mood: moodValues[Math.floor(Math.random() * moodValues.length)],
+        intensity: Math.floor(Math.random() * 5) + 3, // random intensity between 3-7
         activities: [activityOptions[Math.floor(Math.random() * activityOptions.length)].name],
-        notes: '',
+        notes: i % 5 === 0 ? 'Feeling reflective today.' : '',
         createdAt: date.toISOString(),
       });
     }
@@ -72,6 +75,11 @@ const MoodTracker = () => {
     return mood ? mood.emoji : '😐';
   };
 
+  const getMoodColor = (moodValue) => {
+    const mood = moodOptions.find(m => m.value === moodValue);
+    return mood ? mood.color : '#FBBF24';
+  };
+
   const getMoodValue = (moodType) => {
     switch (moodType) {
       case 'happy': return 3;
@@ -81,10 +89,57 @@ const MoodTracker = () => {
     }
   };
 
-  const getLast7DaysMoods = () => {
-    return moods
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-      .slice(-7);
+  const getLastNDaysMoods = (n) => {
+    // Create a map to store one mood per day
+    const moodMap = new Map();
+    
+    // Sort moods by date (most recent first)
+    const sortedMoods = [...moods].sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    
+    // Group by date (keep the most recent mood for each day)
+    sortedMoods.forEach(mood => {
+      const date = new Date(mood.createdAt).toDateString();
+      if (!moodMap.has(date)) {
+        moodMap.set(date, mood);
+      }
+    });
+    
+    // Get array of moods for the last n days
+    const result = [];
+    for (let i = 0; i < n; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toDateString();
+      
+      if (moodMap.has(dateStr)) {
+        result.unshift(moodMap.get(dateStr));
+      } else {
+        // No mood for this day, add a placeholder
+        result.unshift({
+          _id: `placeholder-${i}`,
+          mood: null,
+          createdAt: date.toISOString(),
+          placeholder: true
+        });
+      }
+    }
+    
+    return result;
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      weekday: viewMode === 'week' ? 'short' : undefined,
+      month: viewMode === 'month' ? 'short' : undefined,
+      day: 'numeric'
+    });
+  };
+
+  const handleMoodClick = (mood) => {
+    setSelectedMood(selectedMood?._id === mood._id ? null : mood);
   };
 
   const handleSubmit = async (e) => {
@@ -122,7 +177,7 @@ const MoodTracker = () => {
     );
   }
 
-  const moodData = getLast7DaysMoods();
+  const moodData = viewMode === 'week' ? getLastNDaysMoods(7) : getLastNDaysMoods(30);
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -134,33 +189,107 @@ const MoodTracker = () => {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Your Mood History</h2>
-        <div className="h-64 relative">
-          {/* Custom mood graph without Chart.js */}
-          <div className="absolute left-0 h-full flex flex-col justify-between py-2 text-sm text-gray-600">
-            <div>Happy 😊</div>
-            <div>Neutral 😐</div>
-            <div>Sad 😔</div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">Your Mood History</h2>
+          <div className="flex space-x-2">
+            <button 
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1 rounded-md ${viewMode === 'week' 
+                ? 'bg-primary-100 text-primary-700 font-medium' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Week
+            </button>
+            <button 
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1 rounded-md ${viewMode === 'month' 
+                ? 'bg-primary-100 text-primary-700 font-medium' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Month
+            </button>
           </div>
-          <div className="ml-16 h-full bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="h-full flex items-end">
-              {moodData.map((mood, index) => {
-                const moodValue = getMoodValue(mood.mood);
-                const height = `${(moodValue / 3) * 100}%`;
-                const day = new Date(mood.createdAt).toLocaleDateString('en-US', { weekday: 'short' });
-                
-                return (
-                  <div key={mood._id} className="flex-1 flex flex-col items-center">
-                    <div className="text-lg mb-1">{getMoodEmoji(mood.mood)}</div>
-                    <div 
-                      className="w-4/5 bg-primary-200 rounded-t-lg relative"
-                      style={{ height }}
-                    ></div>
-                    <div className="text-xs mt-2 text-gray-500">{day}</div>
+        </div>
+        
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2 px-4">
+            <div className="text-xs text-gray-500">Happy</div>
+            <div className="text-xs text-gray-500">Date</div>
+            <div className="text-xs text-gray-500">Sad</div>
+          </div>
+          
+          <div className="space-y-2">
+            {moodData.map((mood) => (
+              <div 
+                key={mood._id} 
+                className={`relative ${mood.placeholder ? '' : 'cursor-pointer hover:bg-gray-50'}`}
+                onClick={() => !mood.placeholder && handleMoodClick(mood)}
+              >
+                <div className="flex items-center justify-between px-4 py-2 rounded-lg border border-gray-200">
+                  <div className="w-1/3 flex justify-start">
+                    {mood.mood === 'happy' && (
+                      <div className="h-4 w-16 bg-gradient-to-r from-green-300 to-transparent rounded-full"></div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                  
+                  <div className="flex flex-col items-center">
+                    {mood.placeholder ? (
+                      <div className="text-xs text-gray-400">{formatDate(mood.createdAt)}</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl" style={{ color: getMoodColor(mood.mood) }}>{getMoodEmoji(mood.mood)}</div>
+                        <div className="text-xs text-gray-500 mt-1">{formatDate(mood.createdAt)}</div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="w-1/3 flex justify-end">
+                    {mood.mood === 'sad' && (
+                      <div className="h-4 w-16 bg-gradient-to-r from-transparent to-red-300 rounded-full"></div>
+                    )}
+                  </div>
+                </div>
+                
+                {selectedMood && selectedMood._id === mood._id && (
+                  <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-fadeIn">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-900">Details</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {new Date(mood.createdAt).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <span className="text-3xl">{getMoodEmoji(mood.mood)}</span>
+                    </div>
+                    
+                    {mood.activities && mood.activities.length > 0 && (
+                      <div className="mt-3">
+                        <h4 className="text-sm font-medium text-gray-700">Activities:</h4>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {mood.activities.map((activity, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                              {activityOptions.find(a => a.name === activity)?.icon} {activity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {mood.notes && (
+                      <div className="mt-3">
+                        <h4 className="text-sm font-medium text-gray-700">Notes:</h4>
+                        <p className="text-sm text-gray-600 mt-1">{mood.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -183,6 +312,10 @@ const MoodTracker = () => {
                       ? 'border-primary-500 bg-primary-50 transform scale-105'
                       : 'border-gray-200 hover:border-primary-200'
                     }`}
+                  style={{ 
+                    borderColor: formData.mood === option.value ? option.color : '',
+                    backgroundColor: formData.mood === option.value ? `${option.color}15` : ''
+                  }}
                 >
                   <div className="text-3xl mb-2">{option.emoji}</div>
                   <span className="text-sm font-medium text-gray-900">
@@ -243,6 +376,16 @@ const MoodTracker = () => {
           </button>
         </form>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

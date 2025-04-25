@@ -5,6 +5,9 @@ const MeditationLibrary = () => {
   const [meditations, setMeditations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [activeSession, setActiveSession] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [sessionStep, setSessionStep] = useState(0);
 
   const guidedMeditations = [
     {
@@ -30,9 +33,56 @@ const MeditationLibrary = () => {
     }
   ];
 
+  // Meditation session instructions for each type
+  const meditationInstructions = {
+    "1": [
+      "Find a comfortable seated position, with your back straight and shoulders relaxed.",
+      "Close your eyes and take a few deep breaths.",
+      "Feel the sensation of your breath as it enters and leaves your nostrils.",
+      "When your mind wanders, gently bring your attention back to your breath.",
+      "Continue breathing naturally, maintaining awareness of each breath."
+    ],
+    "2": [
+      "Sit or lie down in a comfortable position and close your eyes.",
+      "Begin by bringing attention to your toes, noticing any sensations.",
+      "Slowly move your awareness up through your feet, ankles, and legs.",
+      "Continue moving attention through your torso, arms, neck, and finally to your head.",
+      "Notice any areas of tension and try to relax them with each breath."
+    ],
+    "3": [
+      "Sit comfortably with your eyes closed and take a few deep breaths.",
+      "Visualize someone you care about deeply and wish them happiness.",
+      "Silently repeat: 'May you be happy. May you be healthy. May you be safe.'",
+      "Extend these wishes to yourself, then to others you know, then to all beings.",
+      "Feel the warmth of compassion radiating from your heart in all directions."
+    ]
+  };
+
   useEffect(() => {
     fetchMeditations();
   }, []);
+
+  useEffect(() => {
+    let timer;
+    if (activeSession && timeRemaining > 0) {
+      timer = setTimeout(() => {
+        setTimeRemaining(prev => prev - 1);
+        
+        // Change instruction every minute
+        if (timeRemaining % 60 === 0 && sessionStep < meditationInstructions[activeSession._id].length - 1) {
+          setSessionStep(prev => prev + 1);
+        }
+      }, 1000);
+    } else if (timeRemaining === 0 && activeSession) {
+      // Session complete
+      setTimeout(() => {
+        alert('Meditation session complete. How do you feel?');
+        setActiveSession(null);
+      }, 1000);
+    }
+    
+    return () => clearTimeout(timer);
+  }, [activeSession, timeRemaining, sessionStep]);
 
   const fetchMeditations = async () => {
     try {
@@ -66,16 +116,26 @@ const MeditationLibrary = () => {
     }
   };
 
-  const startMeditation = async (meditationId) => {
+  const startMeditation = async (meditation) => {
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
-      await axios.post(`http://localhost:${backendPort}/api/meditations/${meditationId}/start`);
-      alert(`Starting meditation session. Take a deep breath and relax.`);
+      await axios.post(`http://localhost:${backendPort}/api/meditations/${meditation._id}/start`);
+      setActiveSession(meditation);
+      setTimeRemaining(meditation.duration * 60);
+      setSessionStep(0);
     } catch (err) {
       console.error('Error starting meditation:', err);
       // Provide fallback behavior when backend is not available
-      alert(`Starting meditation session. Take a deep breath and relax.`);
+      setActiveSession(meditation);
+      setTimeRemaining(meditation.duration * 60);
+      setSessionStep(0);
     }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const playYouTubeVideo = (videoId) => {
@@ -86,10 +146,56 @@ const MeditationLibrary = () => {
     setActiveVideo(null);
   };
 
+  const endSession = () => {
+    if (confirm('Are you sure you want to end this meditation session?')) {
+      setActiveSession(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  if (activeSession) {
+    const progress = ((activeSession.duration * 60 - timeRemaining) / (activeSession.duration * 60)) * 100;
+    const currentInstruction = meditationInstructions[activeSession._id][sessionStep];
+    
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden">
+          <div className="bg-primary-600 text-white p-4 flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">{activeSession.title}</h2>
+            <button 
+              onClick={endSession}
+              className="bg-white text-primary-600 px-3 py-1 rounded-full text-sm font-medium hover:bg-gray-100"
+            >
+              End Session
+            </button>
+          </div>
+          
+          <div className="p-8 flex flex-col items-center">
+            <div className="text-6xl font-extralight text-gray-800 mb-8">{formatTime(timeRemaining)}</div>
+            
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-8">
+              <div 
+                className="bg-primary-500 h-3 rounded-full transition-all duration-1000 ease-linear" 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            
+            <div className="text-xl text-center text-gray-700 mb-8 max-w-md">
+              {currentInstruction}
+            </div>
+            
+            <div className="text-sm text-gray-500 italic text-center">
+              Focus on your breath and let go of any distractions.
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -149,17 +255,24 @@ const MeditationLibrary = () => {
         <h2 className="text-2xl font-semibold text-gray-900 mb-6">In-App Meditations</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {meditations.map((meditation) => (
-            <div key={meditation._id} className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="p-4">
-                <h3 className="text-lg font-medium text-gray-900">{meditation.title}</h3>
-                <p className="mt-2 text-gray-600">{meditation.description}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
+            <div key={meditation._id} className="bg-white shadow rounded-lg overflow-hidden group hover:shadow-lg transition-all">
+              <div className="p-6">
+                <div className="text-center mb-4">
+                  <span className="inline-block p-3 rounded-full bg-primary-100 text-primary-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  </span>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 text-center">{meditation.title}</h3>
+                <p className="mt-3 text-gray-600 text-center">{meditation.description}</p>
+                <div className="mt-6 border-t border-gray-100 pt-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-500">
                     {meditation.duration} minutes
                   </span>
                   <button
-                    onClick={() => startMeditation(meditation._id)}
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    onClick={() => startMeditation(meditation)}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors group-hover:scale-105 transform duration-200"
                   >
                     Start
                   </button>
