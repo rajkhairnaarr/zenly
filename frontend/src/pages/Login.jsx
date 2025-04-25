@@ -8,7 +8,7 @@ const Login = () => {
     password: '',
   });
 
-  const { login, error, clearError } = useContext(AuthContext);
+  const { login, error, clearError, guestLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const onChange = (e) => {
@@ -24,6 +24,11 @@ const Login = () => {
     } catch (err) {
       console.error('Login error:', err);
     }
+  };
+
+  const handleGuestLogin = () => {
+    guestLogin();
+    navigate('/');
   };
 
   return (
@@ -82,13 +87,22 @@ const Login = () => {
           </div>
         </form>
 
-        <div className="text-sm text-center">
-          <Link
-            to="/register"
-            className="font-medium text-primary-600 hover:text-primary-500"
+        <div className="flex flex-col space-y-4">
+          <button
+            onClick={handleGuestLogin}
+            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
-            Don't have an account? Sign up
-          </Link>
+            Continue as Guest
+          </button>
+          
+          <div className="text-sm text-center">
+            <Link
+              to="/register"
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
+              Don't have an account? Sign up
+            </Link>
+          </div>
         </div>
       </div>
     </div>

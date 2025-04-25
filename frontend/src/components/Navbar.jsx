@@ -5,7 +5,7 @@ import { Disclosure, Menu, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, isGuest } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -53,6 +53,11 @@ const Navbar = () => {
                 </div>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                {isGuest && (
+                  <span className="mr-3 text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                    Guest Mode
+                  </span>
+                )}
                 <Menu as="div" className="relative ml-3">
                   <div>
                     <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
@@ -73,6 +78,35 @@ const Navbar = () => {
                     leaveTo="transform opacity-0 scale-95"
                   >
                     <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      {isGuest && (
+                        <>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <Link
+                                to="/login"
+                                className={`${
+                                  active ? 'bg-gray-100' : ''
+                                } block w-full px-4 py-2 text-left text-sm text-gray-700`}
+                              >
+                                Sign in
+                              </Link>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <Link
+                                to="/register"
+                                className={`${
+                                  active ? 'bg-gray-100' : ''
+                                } block w-full px-4 py-2 text-left text-sm text-gray-700`}
+                              >
+                                Register
+                              </Link>
+                            )}
+                          </Menu.Item>
+                          <div className="border-t border-gray-100 my-1"></div>
+                        </>
+                      )}
                       <Menu.Item>
                         {({ active }) => (
                           <button
@@ -81,7 +115,7 @@ const Navbar = () => {
                               active ? 'bg-gray-100' : ''
                             } block w-full px-4 py-2 text-left text-sm text-gray-700`}
                           >
-                            Sign out
+                            {isGuest ? 'Exit Guest Mode' : 'Sign out'}
                           </button>
                         )}
                       </Menu.Item>
@@ -129,17 +163,42 @@ const Navbar = () => {
                   </div>
                 </div>
                 <div className="ml-3">
-                  <div className="text-base font-medium text-gray-800">{user?.name}</div>
+                  <div className="text-base font-medium text-gray-800">
+                    {user?.name}
+                    {isGuest && (
+                      <span className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full">
+                        Guest
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm font-medium text-gray-500">{user?.email}</div>
                 </div>
               </div>
               <div className="mt-3 space-y-1">
+                {isGuest && (
+                  <>
+                    <Disclosure.Button
+                      as={Link}
+                      to="/login"
+                      className="block w-full px-4 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      Sign in
+                    </Disclosure.Button>
+                    <Disclosure.Button
+                      as={Link}
+                      to="/register"
+                      className="block w-full px-4 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      Register
+                    </Disclosure.Button>
+                  </>
+                )}
                 <Disclosure.Button
                   as="button"
                   onClick={handleLogout}
                   className="block w-full px-4 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 >
-                  Sign out
+                  {isGuest ? 'Exit Guest Mode' : 'Sign out'}
                 </Disclosure.Button>
               </div>
             </div>

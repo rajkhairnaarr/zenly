@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [apiBaseUrl, setApiBaseUrl] = useState('http://localhost:5001/api');
+  const [isGuest, setIsGuest] = useState(localStorage.getItem('isGuest') === 'true');
 
   // Set up API base URL from backend port in localStorage
   useEffect(() => {
@@ -31,7 +32,18 @@ export const AuthProvider = ({ children }) => {
   // Load user from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const guestMode = localStorage.getItem('isGuest') === 'true';
+    
+    if (guestMode) {
+      setIsGuest(true);
+      setUser({
+        name: 'Guest User',
+        email: 'guest@example.com',
+        role: 'user',
+        id: 'guest-user'
+      });
+      setLoading(false);
+    } else if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       loadUser();
     } else {
@@ -59,9 +71,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Guest login
+  const guestLogin = () => {
+    // Clear any existing auth tokens
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Set guest mode
+    localStorage.setItem('isGuest', 'true');
+    setIsGuest(true);
+    
+    // Set guest user
+    setUser({
+      name: 'Guest User',
+      email: 'guest@example.com',
+      role: 'user',
+      id: 'guest-user'
+    });
+    
+    return { success: true };
+  };
+
   // Register user
   const register = async (formData) => {
     try {
+      // Clear guest mode if active
+      if (isGuest) {
+        localStorage.removeItem('isGuest');
+        setIsGuest(false);
+      }
+      
       const res = await axios.post('/auth/register', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -76,6 +115,12 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (formData) => {
     try {
+      // Clear guest mode if active
+      if (isGuest) {
+        localStorage.removeItem('isGuest');
+        setIsGuest(false);
+      }
+      
       const res = await axios.post('/auth/login', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -90,8 +135,10 @@ export const AuthProvider = ({ children }) => {
   // Logout user
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('isGuest');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
+    setIsGuest(false);
   };
 
   // Clear error
@@ -109,7 +156,9 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         clearError,
-        apiBaseUrl
+        apiBaseUrl,
+        guestLogin,
+        isGuest
       }}
     >
       {children}
