@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 export const AuthContext = createContext();
@@ -7,26 +7,93 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [apiBaseUrl, setApiBaseUrl] = useState('http://localhost:5001/api');
   const [isGuest, setIsGuest] = useState(localStorage.getItem('isGuest') === 'true');
+  // Use ref to track API request status
+  const pendingRequests = useRef({});
+  const requestTimeouts = useRef({});
 
-  // Set up API base URL from backend port in localStorage
+  // Set up axios defaults
   useEffect(() => {
-    const backendPort = localStorage.getItem('backendPort') || '5001';
-    const newBaseUrl = `http://localhost:${backendPort}/api`;
-    setApiBaseUrl(newBaseUrl);
-    axios.defaults.baseURL = newBaseUrl;
+    // Use relative URL which will go through the Vite proxy in development
+    axios.defaults.baseURL = '/api';
     
-    // Listen for changes to backendPort in localStorage
-    const handleStorageChange = () => {
-      const updatedPort = localStorage.getItem('backendPort') || '5001';
-      const updatedBaseUrl = `http://localhost:${updatedPort}/api`;
-      setApiBaseUrl(updatedBaseUrl);
-      axios.defaults.baseURL = updatedBaseUrl;
+    // Add request interceptor to prevent duplicate requests causing freezing
+    axios.interceptors.request.use(
+      config => {
+        const requestKey = `${config.method}-${config.url}`;
+        
+        // Cancel any existing timeouts for this request
+        if (requestTimeouts.current[requestKey]) {
+          clearTimeout(requestTimeouts.current[requestKey]);
+        }
+        
+        // If there's already a pending request with this key, don't send another
+        if (pendingRequests.current[requestKey]) {
+          console.log(`Request ${requestKey} already in progress, cancelling duplicate`);
+          
+          // Create a cancel token
+          const source = axios.CancelToken.source();
+          config.cancelToken = source.token;
+          source.cancel('Duplicate request cancelled');
+          
+          return config;
+        }
+        
+        // Mark this request as pending
+        pendingRequests.current[requestKey] = true;
+        
+        // Set a timeout to clear the pending flag after 10 seconds
+        // This prevents the app from getting stuck if a request never completes
+        requestTimeouts.current[requestKey] = setTimeout(() => {
+          console.log(`Request ${requestKey} timed out, clearing pending status`);
+          delete pendingRequests.current[requestKey];
+          delete requestTimeouts.current[requestKey];
+        }, 10000);
+        
+        return config;
+      },
+      error => Promise.reject(error)
+    );
+    
+    // Add response interceptor to clear pending request flags
+    axios.interceptors.response.use(
+      response => {
+        const requestKey = `${response.config.method}-${response.config.url}`;
+        
+        // Clear the pending flag for this request
+        delete pendingRequests.current[requestKey];
+        
+        // Clear any timeouts
+        if (requestTimeouts.current[requestKey]) {
+          clearTimeout(requestTimeouts.current[requestKey]);
+          delete requestTimeouts.current[requestKey];
+        }
+        
+        return response;
+      },
+      error => {
+        // If we have config, clear the pending flag
+        if (error.config) {
+          const requestKey = `${error.config.method}-${error.config.url}`;
+          
+          delete pendingRequests.current[requestKey];
+          
+          if (requestTimeouts.current[requestKey]) {
+            clearTimeout(requestTimeouts.current[requestKey]);
+            delete requestTimeouts.current[requestKey];
+          }
+        }
+        
+        return Promise.reject(error);
+      }
+    );
+    
+    return () => {
+      // Clear all pending timeouts when component unmounts
+      Object.values(requestTimeouts.current).forEach(timeout => {
+        clearTimeout(timeout);
+      });
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Load user from localStorage on mount
@@ -49,10 +116,10 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
-  }, [apiBaseUrl]); // Re-run when API base URL changes
+  }, []); // Only run on mount
 
-  // Load user data
-  const loadUser = async () => {
+  // Load user data with retry logic
+  const loadUser = async (retryCount = 0) => {
     try {
       const res = await axios.get('/auth/me');
       setUser(res.data);
@@ -61,6 +128,19 @@ export const AuthProvider = ({ children }) => {
       // Don't remove token or show error if backend is not available
       if (err.code === 'ERR_NETWORK') {
         console.log('Backend server not available, continuing in offline mode');
+        
+        // Retry up to 3 times with exponential backoff
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          console.log(`Retrying in ${delay}ms...`);
+          
+          setTimeout(() => {
+            loadUser(retryCount + 1);
+          }, delay);
+          
+          // Don't set loading to false yet
+          return;
+        }
       } else {
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
@@ -156,7 +236,6 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         clearError,
-        apiBaseUrl,
         guestLogin,
         isGuest
       }}

@@ -12,8 +12,16 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// Determine environment
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: isProduction 
+    ? ['https://zenly.vercel.app', 'https://zenly-frontend.vercel.app'] 
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Create User model schema
@@ -350,6 +358,12 @@ async function startServer() {
 
     // Try different ports if the primary one is in use
     const tryListen = (port) => {
+      // Don't try to listen on a port in Vercel environment
+      if (isProduction && process.env.VERCEL) {
+        console.log('Running on Vercel, skipping port binding');
+        return;
+      }
+      
       const server = app.listen(port, () => {
         console.log(`Server running on port ${port}`);
         // Store the actual port used for reference
