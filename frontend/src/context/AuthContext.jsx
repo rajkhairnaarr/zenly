@@ -3,9 +3,6 @@ import axios from 'axios';
 
 export const AuthContext = createContext();
 
-// Define the backend API URL
-const API_BASE_URL = 'https://zenly-backend.vercel.app/api';
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,8 +15,8 @@ export const AuthProvider = ({ children }) => {
 
   // Set up axios defaults
   useEffect(() => {
-    // Set the base URL for all axios requests
-    axios.defaults.baseURL = API_BASE_URL;
+    // Use relative URL which will go through the Vite proxy in development
+    axios.defaults.baseURL = '/api';
     
     // Add request interceptor to prevent duplicate requests causing freezing
     axios.interceptors.request.use(
@@ -86,11 +83,6 @@ export const AuthProvider = ({ children }) => {
             clearTimeout(requestTimeouts.current[requestKey]);
             delete requestTimeouts.current[requestKey];
           }
-        }
-        
-        // Don't log cancellation errors
-        if (!axios.isCancel(error)) {
-           console.error('Axios Response Error:', error);
         }
         
         return Promise.reject(error);
