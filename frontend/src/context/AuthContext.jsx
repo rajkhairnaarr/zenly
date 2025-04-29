@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Set the base URL based on the environment
 const API_URL = import.meta.env.PROD 
-  ? ''  // Empty because we're using relative URLs now
+  ? ''  // Empty because we're using relative URLs now that will be caught by the rewrites
   : '';
 axios.defaults.baseURL = `${API_URL}/api`;
 
