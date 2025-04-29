@@ -423,8 +423,13 @@ async function startServer() {
 // Export the Express app for Vercel
 module.exports = app;
 
-// Connect to MongoDB when the app is loaded
-connectToMongoDB();
+// Connect to MongoDB when the app is loaded, handle initial error
+try {
+  connectToMongoDB();
+} catch (initialError) {
+  console.error("CRITICAL: Initial MongoDB connection failed during module load:", initialError);
+  // Note: In a serverless function, this might still prevent proper startup.
+}
 
 // Start the server if we're not in a serverless environment
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
