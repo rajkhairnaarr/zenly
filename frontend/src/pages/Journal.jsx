@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { PencilIcon, CalendarIcon, BookOpenIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, CalendarIcon, BookOpenIcon, PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const Journal = () => {
   const [entries, setEntries] = useState([]);
@@ -11,6 +11,7 @@ const Journal = () => {
   });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const moodEmojis = {
     happy: '😊',
@@ -28,8 +29,8 @@ const Journal = () => {
   const fetchEntries = async () => {
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
-      const res = await axios.get(`http://localhost:${backendPort}/journal`);
-      setEntries(res.data);
+      const res = await axios.get(`http://localhost:${backendPort}/api/journal`);
+      setEntries(res.data.data || res.data);
     } catch (err) {
       console.error('Error fetching journal entries:', err);
       // Mock data for development
@@ -65,7 +66,7 @@ const Journal = () => {
     e.preventDefault();
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
-      await axios.post(`http://localhost:${backendPort}/journal`, formData);
+      await axios.post(`http://localhost:${backendPort}/api/journal`, formData);
       setFormData({ title: '', content: '', mood: 'neutral' });
       fetchEntries();
       setShowForm(false);
@@ -82,6 +83,25 @@ const Journal = () => {
       ]);
       setFormData({ title: '', content: '', mood: 'neutral' });
       setShowForm(false);
+    }
+  };
+
+  const deleteEntry = async (id) => {
+    if (!id || deleting) return;
+    
+    try {
+      setDeleting(true);
+      const backendPort = localStorage.getItem('backendPort') || '5001';
+      await axios.delete(`http://localhost:${backendPort}/api/journal/${id}`);
+      
+      // Remove the entry from state
+      setEntries(entries.filter(entry => entry._id !== id));
+    } catch (err) {
+      console.error('Error deleting journal entry:', err);
+      // For demo purposes, remove it from the UI anyway
+      setEntries(entries.filter(entry => entry._id !== id));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -221,9 +241,23 @@ const Journal = () => {
               <div className="px-6 py-4">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-xl font-semibold text-gray-900">{entry.title}</h3>
-                  <span className="text-2xl" title={entry.mood}>
-                    {moodEmojis[entry.mood] || '😐'}
-                  </span>
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-2" title={entry.mood}>
+                      {moodEmojis[entry.mood] || '😐'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this journal entry?')) {
+                          deleteEntry(entry._id);
+                        }
+                      }}
+                      className="p-1.5 text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                      title="Delete journal entry"
+                      disabled={deleting}
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-3 text-gray-700 whitespace-pre-line">{entry.content}</p>
                 <div className="mt-4 flex items-center text-sm text-gray-500">

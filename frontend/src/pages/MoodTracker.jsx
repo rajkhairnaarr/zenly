@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaceSmileIcon, FaceFrownIcon } from '@heroicons/react/24/outline';
+import { FaceSmileIcon, FaceFrownIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { MinusCircleIcon } from '@heroicons/react/24/outline';
 
 const MoodTracker = () => {
@@ -14,6 +14,7 @@ const MoodTracker = () => {
   });
   const [selectedMood, setSelectedMood] = useState(null);
   const [viewMode, setViewMode] = useState('week'); // 'week' or 'month'
+  const [deleting, setDeleting] = useState(false);
 
   const moodOptions = [
     { value: 'happy', label: 'Happy', icon: FaceSmileIcon, emoji: '😊', color: '#4ADE80' },
@@ -169,6 +170,33 @@ const MoodTracker = () => {
     }
   };
 
+  const deleteMood = async (id) => {
+    if (!id || deleting) return;
+    
+    try {
+      setDeleting(true);
+      const backendPort = localStorage.getItem('backendPort') || '5001';
+      await axios.delete(`http://localhost:${backendPort}/api/mood/${id}`);
+      
+      // Remove the mood from state
+      setMoods(moods.filter(mood => mood._id !== id));
+      
+      // If this was the selected mood, unselect it
+      if (selectedMood && selectedMood._id === id) {
+        setSelectedMood(null);
+      }
+    } catch (err) {
+      console.error('Error deleting mood:', err);
+      // For demo purposes, remove it from the UI anyway
+      setMoods(moods.filter(mood => mood._id !== id));
+      if (selectedMood && selectedMood._id === id) {
+        setSelectedMood(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -264,7 +292,22 @@ const MoodTracker = () => {
                           })}
                         </p>
                       </div>
-                      <span className="text-3xl">{getMoodEmoji(mood.mood)}</span>
+                      <div className="flex items-center">
+                        <span className="text-3xl mr-3">{getMoodEmoji(mood.mood)}</span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this mood entry?')) {
+                              deleteMood(mood._id);
+                            }
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                          title="Delete mood entry"
+                          disabled={deleting}
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                     
                     {mood.activities && mood.activities.length > 0 && (
