@@ -1,7 +1,11 @@
 import { createContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-axios.defaults.baseURL = '/api'; // ✅ Add this here so it applies immediately
+// Set the base URL based on the environment
+const API_URL = import.meta.env.PROD 
+  ? 'https://zenly-neon.vercel.app'
+  : '';
+axios.defaults.baseURL = `${API_URL}/api`;
 
 export const AuthContext = createContext();
 
