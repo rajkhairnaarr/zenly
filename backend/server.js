@@ -17,7 +17,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Middleware
 app.use(cors({
   origin: isProduction 
-    ? ['https://zenly.vercel.app', 'https://zenly-frontend.vercel.app'] 
+    ? ['https://zenly.vercel.app', 'https://zenly-frontend.vercel.app', 'https://zenly-frontend-rajkhairnaarrs-projects.vercel.app'] 
     : ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 }));
