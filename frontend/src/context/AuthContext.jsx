@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Set the base URL based on the environment
 const API_URL = import.meta.env.PROD 
-  ? 'https://zenly-backend-rajkhairnaarrs-projects.vercel.app'  // Update this with your actual backend URL
+  ? 'https://zenly-neon.vercel.app'  // This should be your original "zenly" project URL
   : '';
 axios.defaults.baseURL = `${API_URL}/api`;
 
