@@ -1,6 +1,8 @@
 import { createContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
+axios.defaults.baseURL = '/api'; // ✅ Add this here so it applies immediately
+
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -9,88 +11,66 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isGuest, setIsGuest] = useState(localStorage.getItem('isGuest') === 'true');
   const [backendError, setBackendError] = useState(false);
-  // Use ref to track API request status
-  const pendingRequests = useRef({});
-  const requestTimeouts = useRef({});
+  const pendingRequests = useRef({}); // Track requests to prevent duplicates
+  const requestTimeouts = useRef({}); // Track timeouts for requests
 
-  // Set up axios defaults
   useEffect(() => {
-    // Use relative URL which will go through the Vite proxy in development
-    axios.defaults.baseURL = '/api';
-    
-    // Add request interceptor to prevent duplicate requests causing freezing
     axios.interceptors.request.use(
       config => {
         const requestKey = `${config.method}-${config.url}`;
         
-        // Cancel any existing timeouts for this request
-        if (requestTimeouts.current[requestKey]) {
-          clearTimeout(requestTimeouts.current[requestKey]);
-        }
-        
-        // If there's already a pending request with this key, don't send another
+        // If a request is already pending, cancel it
         if (pendingRequests.current[requestKey]) {
           console.log(`Request ${requestKey} already in progress, cancelling duplicate`);
-          
-          // Create a cancel token
           const source = axios.CancelToken.source();
           config.cancelToken = source.token;
           source.cancel('Duplicate request cancelled');
-          
           return config;
         }
-        
-        // Mark this request as pending
+
+        // Mark the request as pending
         pendingRequests.current[requestKey] = true;
-        
+
         // Set a timeout to clear the pending flag after 10 seconds
-        // This prevents the app from getting stuck if a request never completes
         requestTimeouts.current[requestKey] = setTimeout(() => {
           console.log(`Request ${requestKey} timed out, clearing pending status`);
           delete pendingRequests.current[requestKey];
           delete requestTimeouts.current[requestKey];
         }, 10000);
-        
+
         return config;
       },
       error => Promise.reject(error)
     );
-    
-    // Add response interceptor to clear pending request flags
+
+    // Clear pending requests once they are completed or failed
     axios.interceptors.response.use(
       response => {
         const requestKey = `${response.config.method}-${response.config.url}`;
-        
-        // Clear the pending flag for this request
         delete pendingRequests.current[requestKey];
-        
-        // Clear any timeouts
+
         if (requestTimeouts.current[requestKey]) {
           clearTimeout(requestTimeouts.current[requestKey]);
           delete requestTimeouts.current[requestKey];
         }
-        
+
         return response;
       },
       error => {
-        // If we have config, clear the pending flag
-        if (error.config) {
-          const requestKey = `${error.config.method}-${error.config.url}`;
-          
-          delete pendingRequests.current[requestKey];
-          
-          if (requestTimeouts.current[requestKey]) {
-            clearTimeout(requestTimeouts.current[requestKey]);
-            delete requestTimeouts.current[requestKey];
-          }
+        const requestKey = `${error.config.method}-${error.config.url}`;
+        delete pendingRequests.current[requestKey];
+
+        if (requestTimeouts.current[requestKey]) {
+          clearTimeout(requestTimeouts.current[requestKey]);
+          delete requestTimeouts.current[requestKey];
         }
-        
+
         return Promise.reject(error);
       }
     );
-    
+
     return () => {
-      // Clear all pending timeouts when component unmounts
+      // Clear timeouts on unmount
       Object.values(requestTimeouts.current).forEach(timeout => {
         clearTimeout(timeout);
       });
@@ -147,6 +127,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Register user
+  const register = async (formData) => {
+    try {
+      // Clear guest mode if active
+      if (isGuest) {
+        localStorage.removeItem('isGuest');
+        setIsGuest(false);
+      }
+
+      const res = await axios.post('/auth/register', formData);
+      localStorage.setItem('token', res.data.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      await loadUser(0); // Load the user after successful registration
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed');
+      throw err;
+    }
+  };
+
   // Guest login
   const guestLogin = () => {
     // Clear any existing auth tokens
@@ -168,26 +168,6 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
-  // Register user
-  const register = async (formData) => {
-    try {
-      // Clear guest mode if active
-      if (isGuest) {
-        localStorage.removeItem('isGuest');
-        setIsGuest(false);
-      }
-      
-      const res = await axios.post('/auth/register', formData);
-      localStorage.setItem('token', res.data.token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      await loadUser(0);
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
-      throw err;
-    }
-  };
-
   // Login user
   const login = async (formData) => {
     try {
@@ -196,11 +176,11 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('isGuest');
         setIsGuest(false);
       }
-      
+
       const res = await axios.post('/auth/login', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      await loadUser(0);
+      await loadUser(0); // Load the user after successful login
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -242,4 +222,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-}; 
+};

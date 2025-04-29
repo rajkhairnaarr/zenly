@@ -1,0 +1,21 @@
+[Unit]
+Description=Zenly Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/your/zenly/project
+ExecStart=/usr/bin/node backend/server.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=zenly-backend
+Environment=NODE_ENV=production
+Environment=PORT=5001
+Environment=MONGODB_URI=YOUR_MONGODB_URI
+Environment=JWT_SECRET=YOUR_JWT_SECRET
+
+[Install]
+WantedBy=multi-user.target 

@@ -4,7 +4,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Load environment variables
 dotenv.config();
@@ -49,6 +48,20 @@ const UserSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Encrypt password using bcrypt
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) {
+    next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Match user entered password to hashed password in database
+UserSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 // Create User model
 const User = mongoose.model('User', UserSchema);
@@ -122,16 +135,20 @@ const adminAuth = (req, res, next) => {
   next();
 };
 
-// Start MongoDB Memory Server and connect
-async function startServer() {
+// Routes
+const testRoute = require('./routes/test');
+app.use('/api/test', testRoute);
+
+// Start MongoDB connection
+async function connectToMongoDB() {
   try {
-    // Create an in-memory MongoDB instance
-    const mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
-    
-    // Connect to the in-memory database
-    await mongoose.connect(mongoUri);
-    console.log('Connected to in-memory MongoDB instance');
+    // Connect to MongoDB using the connection string from environment variable
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/zenly';
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('Connected to MongoDB');
 
     // Create a default admin user
     const adminExists = await User.findOne({ email: 'admin@zenly.com' });
@@ -147,7 +164,20 @@ async function startServer() {
       });
       console.log('Default admin user created');
     }
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    // Don't throw the error, just log it
+    // This allows the app to continue even if MongoDB connection fails
+    // The app will try to reconnect on the next request
+  }
+}
 
+// Start server function
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await connectToMongoDB();
+    
     // Basic route
     app.get('/api', (req, res) => {
       res.json({ message: 'Welcome to Zenly API' });
@@ -170,15 +200,11 @@ async function startServer() {
           return res.status(400).json({ message: 'User already exists' });
         }
         
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        
-        // Create new user
+        // Create new user - password will be hashed by the pre-save middleware
         const newUser = await User.create({
           name,
           email,
-          password: hashedPassword
+          password
         });
         
         // Create JWT token
@@ -199,7 +225,7 @@ async function startServer() {
         });
       } catch (err) {
         console.error('Registration error:', err);
-        res.status(500).json({ message: 'Server error during registration' });
+        res.status(500).json({ message: 'Server error during registration: ' + err.message });
       }
     });
 
@@ -214,13 +240,13 @@ async function startServer() {
         }
         
         // Check for existing user
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select('+password');
         if (!user) {
           return res.status(400).json({ message: 'Invalid credentials' });
         }
         
-        // Validate password
-        const isMatch = await bcrypt.compare(password, user.password);
+        // Validate password using the matchPassword method
+        const isMatch = await user.matchPassword(password);
         if (!isMatch) {
           return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -243,7 +269,7 @@ async function startServer() {
         });
       } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ message: 'Server error during login' });
+        res.status(500).json({ message: 'Server error during login: ' + err.message });
       }
     });
 
@@ -356,35 +382,51 @@ async function startServer() {
       }
     });
 
-    // Try different ports if the primary one is in use
-    const tryListen = (port) => {
-      // Don't try to listen on a port in Vercel environment
-      if (isProduction && process.env.VERCEL) {
-        console.log('Running on Vercel, skipping port binding');
-        return;
-      }
-      
-      const server = app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-        // Store the actual port used for reference
-        app.set('port', port);
-      }).on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-          console.log(`Port ${port} is busy, trying port ${port + 1}`);
-          tryListen(port + 1);
-        } else {
-          console.error('Server error:', err);
-        }
+    // Add global error handling middleware
+    app.use((err, req, res, next) => {
+      console.error('Unhandled error:', err);
+      res.status(500).json({ 
+        message: 'Server error', 
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
       });
-    };
+    });
 
-    // Start with port 5001 and try alternatives if needed
-    const PORT = process.env.PORT || 5001;
-    tryListen(PORT);
-    
+    // Only start the server if we're not in a serverless environment
+    if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+      // Try different ports if the primary one is in use
+      const tryListen = (port) => {
+        const server = app.listen(port, () => {
+          console.log(`Server running on port ${port}`);
+          // Store the actual port used for reference
+          app.set('port', port);
+        }).on('error', (err) => {
+          if (err.code === 'EADDRINUSE') {
+            console.log(`Port ${port} is busy, trying port ${port + 1}`);
+            tryListen(port + 1);
+          } else {
+            console.error('Server error:', err);
+          }
+        });
+      };
+
+      // Start with port 5001 and try alternatives if needed
+      const PORT = process.env.PORT || 5001;
+      tryListen(PORT);
+    } else {
+      console.log('Running in Vercel serverless environment');
+    }
   } catch (err) {
     console.error('Failed to start server:', err);
   }
 }
 
-startServer();
+// Export the Express app for Vercel
+module.exports = app;
+
+// Connect to MongoDB when the app is loaded
+connectToMongoDB();
+
+// Start the server if we're not in a serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  startServer();
+}
