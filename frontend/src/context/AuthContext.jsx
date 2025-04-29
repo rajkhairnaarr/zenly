@@ -3,8 +3,8 @@ import axios from 'axios';
 
 // Set the base URL based on the environment
 const API_URL = import.meta.env.PROD 
-  ? ''  // Empty because we're using relative URLs now that will be caught by the rewrites
-  : '';
+  ? 'https://zenly-neon.vercel.app'  // Production URL
+  : 'http://localhost:5000';  // Development URL
 axios.defaults.baseURL = `${API_URL}/api`;
 
 export const AuthContext = createContext();
