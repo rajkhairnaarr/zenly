@@ -139,6 +139,10 @@ const adminAuth = (req, res, next) => {
 const testRoute = require('./routes/test');
 app.use('/api/test', testRoute);
 
+// Add a simple test route that doesn't depend on MongoDB
+const simpleTestRoute = require('./test-route');
+app.use('/api/simple', simpleTestRoute);
+
 // Start MongoDB connection
 async function connectToMongoDB() {
   try {
