@@ -102,28 +102,32 @@ export const AuthProvider = ({ children }) => {
   // Load user data with retry logic and permanent fix for infinite loop
   const loadUser = async (retryCount = 0) => {
     try {
-      const res = await axios.get('/auth/me');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const res = await axios.get('/api/auth/me');
       setUser(res.data);
-      setBackendError(false);
+      setLoading(false);
     } catch (err) {
-      if (err.code === 'ERR_NETWORK') {
-        if (retryCount < 5) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          setTimeout(() => {
-            loadUser(retryCount + 1);
-          }, delay);
-          return;
-        } else {
-          setBackendError(true);
-          setError('Unable to connect to backend after several attempts. Please check your connection or try again later.');
-        }
-      } else {
+      // If token is invalid, remove it
+      if (err.response?.status === 401) {
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
-        setError(err.response?.data?.message || 'Error loading user');
+        setUser(null);
       }
-    } finally {
-      setLoading(false);
+      
+      // If we haven't retried too many times, try again after a delay
+      if (retryCount < 3) {
+        setTimeout(() => {
+          loadUser(retryCount + 1);
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -136,7 +140,7 @@ export const AuthProvider = ({ children }) => {
         setIsGuest(false);
       }
 
-      const res = await axios.post('/auth/register', formData);
+      const res = await axios.post('/api/auth/register', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       await loadUser(0); // Load the user after successful registration
@@ -177,7 +181,7 @@ export const AuthProvider = ({ children }) => {
         setIsGuest(false);
       }
 
-      const res = await axios.post('/auth/login', formData);
+      const res = await axios.post('/api/auth/login', formData);
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       await loadUser(0); // Load the user after successful login
