@@ -15,25 +15,15 @@ async function connectToMongoDB() {
         socketTimeoutMS: 30000,
       };
 
-      // Determine the connection string based on environment
-      let mongoUri;
+      // Default MongoDB Atlas URI - This should be replaced with your own in production environment variables
+      const defaultMongoUri = 'mongodb+srv://zenly-user:password123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
       
-      if (process.env.MONGODB_URI) {
-        // Use the provided connection string if available
-        mongoUri = process.env.MONGODB_URI;
-      } else if (process.env.NODE_ENV === 'production') {
-        // Fallback for production (would normally come from environment)
-        mongoUri = 'mongodb://localhost:27017/zenly_production';
-      } else if (process.env.NODE_ENV === 'test') {
-        // Test environment uses an in-memory database
-        mongoUri = 'mongodb://localhost:27017/zenly_test';
-      } else {
-        // Development environment
-        mongoUri = 'mongodb://localhost:27017/zenly_development';
-      }
+      // Use environment variable if set, otherwise fallback to default Atlas URI
+      const mongoUri = process.env.MONGODB_URI || defaultMongoUri;
 
-      // Log connection attempt
-      console.log(`Attempting to connect to MongoDB at: ${mongoUri.split('@').pop()}`);
+      // Log connection attempt (hide credentials from logs)
+      const sanitizedUri = mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+      console.log(`Attempting to connect to MongoDB at: ${sanitizedUri}`);
       
       // Connect to the database
       await mongoose.connect(mongoUri, options);
