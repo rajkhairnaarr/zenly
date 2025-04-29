@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const getUserModel = require('../models/User');
-const { connectToMongoDB } = require('../utils/db');
+const UserQueries = require('../utils/userQueries');
 
 // Handler for login endpoint
 module.exports = async (req, res) => {
@@ -17,10 +16,6 @@ module.exports = async (req, res) => {
     if (logBody.password) logBody.password = '***';
     console.log('Login request:', logBody);
 
-    // Connect to MongoDB
-    await connectToMongoDB();
-    
-    const User = getUserModel();
     const { email, password } = req.body;
     
     // Validate input
@@ -28,8 +23,8 @@ module.exports = async (req, res) => {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
     
-    // Check for existing user
-    const user = await User.findOne({ email });
+    // Find user by email
+    const user = await UserQueries.findUserByEmail(email);
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }

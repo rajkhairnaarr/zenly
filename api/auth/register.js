@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const getUserModel = require('../models/User');
-const { connectToMongoDB } = require('../utils/db');
+const UserQueries = require('../utils/userQueries');
 
 // Handler for register endpoint
 module.exports = async (req, res) => {
@@ -17,10 +15,6 @@ module.exports = async (req, res) => {
     if (logBody.password) logBody.password = '***';
     console.log('Registration request:', logBody);
 
-    // Connect to MongoDB
-    await connectToMongoDB();
-    
-    const User = getUserModel();
     const { name, email, password } = req.body;
     
     // Validate input
@@ -28,37 +22,38 @@ module.exports = async (req, res) => {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
     
-    // Check for existing user
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-    
-    // Create new user
-    const newUser = await User.create({
-      name,
-      email,
-      password
-    });
-    
-    // Create JWT token
-    const token = jwt.sign(
-      { id: newUser._id },
-      process.env.JWT_SECRET || 'zenly_secret_key_2024',
-      { expiresIn: '7d' }
-    );
-    
-    console.log('User registered successfully:', email);
-    
-    res.status(201).json({
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role
+    try {
+      // Use the query utility to register user
+      const newUser = await UserQueries.registerUser({
+        name,
+        email,
+        password
+      });
+      
+      // Create JWT token
+      const token = jwt.sign(
+        { id: newUser._id },
+        process.env.JWT_SECRET || 'zenly_secret_key_2024',
+        { expiresIn: '7d' }
+      );
+      
+      console.log('User registered successfully:', email);
+      
+      res.status(201).json({
+        token,
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        }
+      });
+    } catch (err) {
+      if (err.code === 'USER_EXISTS') {
+        return res.status(400).json({ message: 'User already exists' });
       }
-    });
+      throw err;
+    }
   } catch (err) {
     console.error('Registration error details:', {
       message: err.message,

@@ -10,21 +10,75 @@ const getUserModel = () => {
   const UserSchema = new mongoose.Schema({
     name: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
     email: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
+      trim: true,
+      lowercase: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address']
     },
     password: {
       type: String,
-      required: true
+      required: true,
+      minlength: 6
+    },
+    profilePhoto: {
+      type: String,
+      default: ''
+    },
+    bio: {
+      type: String,
+      default: '',
+      maxlength: 500
+    },
+    location: {
+      type: String,
+      default: ''
     },
     role: {
       type: String,
       enum: ['user', 'admin'],
       default: 'user'
+    },
+    preferences: {
+      darkMode: {
+        type: Boolean,
+        default: false
+      },
+      notificationsEnabled: {
+        type: Boolean,
+        default: true
+      },
+      language: {
+        type: String,
+        default: 'en'
+      }
+    },
+    meditationStats: {
+      totalSessions: {
+        type: Number,
+        default: 0
+      },
+      totalMinutes: {
+        type: Number,
+        default: 0
+      },
+      longestStreak: {
+        type: Number,
+        default: 0
+      },
+      currentStreak: {
+        type: Number,
+        default: 0
+      }
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now
     },
     createdAt: {
       type: Date,
