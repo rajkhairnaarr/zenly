@@ -11,10 +11,15 @@
       "includeFiles": "backend/**",
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/auth/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
     }
   },
   "env": {
     "NODE_ENV": "production",
-    "VERCEL": "true"
+    "VERCEL": "true",
+    "MONGODB_URI": "mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority"
   }
 } 

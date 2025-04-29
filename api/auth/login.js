@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const getUserModel = require('../models/User');
 
 // Connect to MongoDB
 async function connectToMongoDB() {
   try {
     if (mongoose.connection.readyState !== 1) {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/zenly';
+      // Use a valid MongoDB Atlas URI with fallback
+      const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
       await mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -66,6 +68,11 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Log request body (but omit password)
+    const logBody = { ...req.body };
+    if (logBody.password) logBody.password = '***';
+    console.log('Login request:', logBody);
+
     // Connect to MongoDB
     await connectToMongoDB();
     
@@ -96,6 +103,8 @@ module.exports = async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    console.log('User logged in successfully:', email);
+    
     res.json({
       token,
       user: {
@@ -106,7 +115,14 @@ module.exports = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ message: 'Server error during login: ' + err.message });
+    console.error('Login error details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name
+    });
+    res.status(500).json({ 
+      message: 'Server error during login: ' + err.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    });
   }
 }; 

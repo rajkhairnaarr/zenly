@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const getUserModel = require('../models/User');
 
 // Connect to MongoDB
 async function connectToMongoDB() {
   try {
     if (mongoose.connection.readyState !== 1) {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/zenly';
+      // Use a valid MongoDB Atlas URI with fallback
+      const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
       await mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -19,49 +21,6 @@ async function connectToMongoDB() {
   }
 }
 
-// Get User model or create it if it doesn't exist
-const getUserModel = () => {
-  if (mongoose.models.User) {
-    return mongoose.models.User;
-  }
-
-  const UserSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true
-    },
-    password: {
-      type: String,
-      required: true
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  });
-
-  // Encrypt password using bcrypt
-  UserSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) {
-      next();
-    }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  });
-
-  return mongoose.model('User', UserSchema);
-};
-
 // Handler for register endpoint
 module.exports = async (req, res) => {
   // Only handle POST requests
@@ -70,6 +29,11 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Log request body (but omit password)
+    const logBody = { ...req.body };
+    if (logBody.password) logBody.password = '***';
+    console.log('Registration request:', logBody);
+
     // Connect to MongoDB
     await connectToMongoDB();
     
@@ -101,6 +65,8 @@ module.exports = async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    console.log('User registered successfully:', email);
+    
     res.status(201).json({
       token,
       user: {
@@ -111,7 +77,14 @@ module.exports = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ message: 'Server error during registration: ' + err.message });
+    console.error('Registration error details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name
+    });
+    res.status(500).json({ 
+      message: 'Server error during registration: ' + err.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    });
   }
 }; 

@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const getUserModel = require('../models/User');
 
 // Connect to MongoDB
 async function connectToMongoDB() {
   try {
     if (mongoose.connection.readyState !== 1) {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/zenly';
+      // Use a valid MongoDB Atlas URI with fallback
+      const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
       await mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -18,40 +20,6 @@ async function connectToMongoDB() {
   }
 }
 
-// Get User model or create it if it doesn't exist
-const getUserModel = () => {
-  if (mongoose.models.User) {
-    return mongoose.models.User;
-  }
-
-  const UserSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true
-    },
-    password: {
-      type: String,
-      required: true
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  });
-
-  return mongoose.model('User', UserSchema);
-};
-
 // Handler for me endpoint
 module.exports = async (req, res) => {
   // Only handle GET requests
@@ -60,6 +28,8 @@ module.exports = async (req, res) => {
   }
 
   try {
+    console.log('Get user profile request');
+
     // Connect to MongoDB
     await connectToMongoDB();
     
@@ -82,6 +52,8 @@ module.exports = async (req, res) => {
         return res.status(401).json({ message: 'User not found' });
       }
       
+      console.log('User profile retrieved successfully:', user.email);
+      
       res.json({
         id: user._id,
         name: user.name,
@@ -92,7 +64,14 @@ module.exports = async (req, res) => {
       return res.status(401).json({ message: 'Invalid token' });
     }
   } catch (err) {
-    console.error('Error getting user:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error getting user details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name
+    });
+    res.status(500).json({ 
+      message: 'Server error: ' + err.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    });
   }
 }; 
