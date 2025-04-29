@@ -5,7 +5,9 @@ import axios from 'axios';
 const API_URL = import.meta.env.PROD 
   ? 'https://zenly-neon.vercel.app'  // Production URL
   : 'http://localhost:5000';  // Development URL
-axios.defaults.baseURL = `${API_URL}/api`;
+
+// Remove /api from baseURL since it's included in the route paths
+axios.defaults.baseURL = API_URL;
 
 export const AuthContext = createContext();
 
