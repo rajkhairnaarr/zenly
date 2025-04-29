@@ -16,7 +16,7 @@ async function connectToMongoDB() {
       };
 
       // Default MongoDB Atlas URI - This should be replaced with your own in production environment variables
-      const defaultMongoUri = 'mongodb+srv://zenly-user:password123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
+      const defaultMongoUri = 'mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/?retryWrites=true&w=majority&appName=zenly';
       
       // Use environment variable if set, otherwise fallback to default Atlas URI
       const mongoUri = process.env.MONGODB_URI || defaultMongoUri;

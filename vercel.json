@@ -20,6 +20,6 @@
   "env": {
     "NODE_ENV": "production",
     "VERCEL": "true",
-    "MONGODB_URI": "mongodb+srv://zenly-user:password123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority"
+    "MONGODB_URI": "mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/?retryWrites=true&w=majority&appName=zenly"
   }
 } 
