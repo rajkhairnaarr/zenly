@@ -2,63 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const getUserModel = require('../models/User');
-
-// Connect to MongoDB
-async function connectToMongoDB() {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      // Use a valid MongoDB Atlas URI with fallback
-      const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
-      await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-      console.log('Connected to MongoDB in login handler');
-    }
-  } catch (err) {
-    console.error('MongoDB connection error in login handler:', err);
-    throw err;
-  }
-}
-
-// Get User model or create it if it doesn't exist
-const getUserModel = () => {
-  if (mongoose.models.User) {
-    return mongoose.models.User;
-  }
-
-  const UserSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true
-    },
-    password: {
-      type: String,
-      required: true
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  });
-
-  // Match user entered password to hashed password in database
-  UserSchema.methods.matchPassword = async function(enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
-  };
-
-  return mongoose.model('User', UserSchema);
-};
+const { connectToMongoDB } = require('../utils/db');
 
 // Handler for login endpoint
 module.exports = async (req, res) => {

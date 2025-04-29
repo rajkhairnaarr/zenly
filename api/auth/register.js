@@ -2,24 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const getUserModel = require('../models/User');
-
-// Connect to MongoDB
-async function connectToMongoDB() {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      // Use a valid MongoDB Atlas URI with fallback
-      const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zenly:zenly123@cluster0.mongodb.net/zenly?retryWrites=true&w=majority';
-      await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-      console.log('Connected to MongoDB in register handler');
-    }
-  } catch (err) {
-    console.error('MongoDB connection error in register handler:', err);
-    throw err;
-  }
-}
+const { connectToMongoDB } = require('../utils/db');
 
 // Handler for register endpoint
 module.exports = async (req, res) => {
