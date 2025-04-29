@@ -25,10 +25,6 @@
       "dest": "/vite.svg"
     },
     {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico"
-    },
-    {
       "handle": "filesystem"
     },
     {
