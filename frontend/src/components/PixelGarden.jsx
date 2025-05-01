@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSpring, animated } from '@react-spring/web';
 
 // Garden configuration based on meditation streak
 const GARDEN_LEVELS = [
@@ -55,14 +54,6 @@ const PixelGarden = ({ streak = 0 }) => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const animationFrameRef = useRef(null);
   const gardenRef = useRef(null);
-  
-  // Animation spring for elements
-  const animProps = useSpring({
-    scale: isAnimating ? 1.1 : 1,
-    opacity: isAnimating ? 0.8 : 1,
-    config: { tension: 300, friction: 10 },
-    onRest: () => setIsAnimating(false)
-  });
 
   // Determine garden level based on streak
   useEffect(() => {
@@ -75,6 +66,13 @@ const PixelGarden = ({ streak = 0 }) => {
     
     // Trigger generate garden after level change
     generateGarden(level);
+    
+    // Reset animation state after animation completes
+    const timer = setTimeout(() => {
+      setIsAnimating(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, [streak]);
 
   // Handle responsive sizing
@@ -289,6 +287,11 @@ const PixelGarden = ({ streak = 0 }) => {
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'day' ? 'night' : 'day');
     setIsAnimating(true);
+    
+    // Reset animation state after animation completes
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 1000);
   };
   
   // Determine background gradient based on view mode
@@ -418,10 +421,9 @@ const PixelGarden = ({ streak = 0 }) => {
         </button>
       </div>
       
-      <animated.div 
+      <div 
         ref={gardenRef}
-        style={animProps}
-        className="relative mx-auto my-4 rounded-lg overflow-hidden"
+        className={`relative mx-auto my-4 rounded-lg overflow-hidden transition-all duration-1000 ${isAnimating ? 'scale-110 opacity-80' : 'scale-100 opacity-100'}`}
       >
         {/* Garden Background */}
         <div 
@@ -464,7 +466,7 @@ const PixelGarden = ({ streak = 0 }) => {
             </div>
           )}
         </div>
-      </animated.div>
+      </div>
       
       <div className={`text-center mt-4 ${viewMode === 'day' ? 'text-gray-700' : 'text-gray-300'}`}>
         <p className="text-sm italic">
