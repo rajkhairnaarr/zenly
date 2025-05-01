@@ -49,54 +49,51 @@ const sampleMeditations = [
 // Connect to MongoDB
 async function createMeditations() {
   try {
-    // Try multiple MongoDB connection options
-    const mongoUris = [
-      process.env.MONGODB_URI,
-      'mongodb://localhost:27017/zenly',
-      'mongodb://127.0.0.1:27017/zenly'
-    ].filter(Boolean); // Remove undefined/null values
+    // Connect to MongoDB Atlas
+    console.log('Connecting to MongoDB Atlas...');
+    // MongoDB Atlas connection string
+    const mongoUri = 'mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/?retryWrites=true&w=majority&appName=zenly';
     
-    let lastError = null;
-    let connected = false;
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+      socketTimeoutMS: 45000, // Increase socket timeout
+    });
+    console.log('Connected to MongoDB Atlas successfully!');
+
+    // Create the database if it doesn't exist by using the db
+    const db = mongoose.connection.db;
+    console.log(`Connected to database: ${db.databaseName}`);
     
-    // Try each connection URI
-    for (const uri of mongoUris) {
-      try {
-        console.log(`Attempting to connect to MongoDB at: ${uri.includes('@') ? uri.split('@')[0] + '@...' : uri}`);
-        await mongoose.connect(uri, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-        });
-        console.log('Connected to MongoDB successfully!');
-        connected = true;
-        break;
-      } catch (err) {
-        console.log(`Connection failed for URI: ${uri}`);
-        lastError = err;
+    // First check if we can access the meditations collection
+    try {
+      console.log("Checking if Meditation collection exists...");
+      const collections = await db.listCollections().toArray();
+      const collectionNames = collections.map(c => c.name);
+      console.log("Available collections:", collectionNames.join(", "));
+      
+      // Check if there are already meditations
+      console.log("Counting existing meditations...");
+      const existingCount = await Meditation.countDocuments();
+      if (existingCount > 0) {
+        console.log(`${existingCount} meditations already exist in the database.`);
+        console.log('Deleting existing meditations to avoid duplicates...');
+        await Meditation.deleteMany({});
       }
-    }
+      
+      // Insert sample meditations
+      console.log("Inserting new meditations...");
+      const result = await Meditation.insertMany(sampleMeditations);
+      console.log(`${result.length} sample meditations created!`);
     
-    if (!connected) {
-      throw lastError || new Error('All MongoDB connection attempts failed');
+      // Disconnect from MongoDB
+      await mongoose.disconnect();
+      console.log('Disconnected from MongoDB');
+    } catch (err) {
+      console.error('Error working with Meditation collection:', err);
+      await mongoose.disconnect();
     }
-
-    // Check if there are already meditations
-    const existingCount = await Meditation.countDocuments();
-    if (existingCount > 0) {
-      console.log(`${existingCount} meditations already exist in the database.`);
-      console.log('Deleting existing meditations to avoid duplicates...');
-      await Meditation.deleteMany({});
-    }
-
-    // Insert sample meditations
-    const result = await Meditation.insertMany(sampleMeditations);
-    console.log(`${result.length} sample meditations created!`);
-    console.log('Sample meditation data:');
-    console.log(result);
-
-    // Disconnect from MongoDB
-    mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
   } catch (err) {
     console.error('Error creating sample meditations:', err);
   }

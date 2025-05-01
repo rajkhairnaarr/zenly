@@ -146,42 +146,65 @@ app.use('/api/test', testRoute);
 const simpleTestRoute = require('./test-route');
 app.use('/api/simple', simpleTestRoute);
 
+// Admin routes
+// Get all users (admin only)
+app.get('/api/admin/users', auth, adminAuth, async (req, res) => {
+  try {
+    console.log('GET /api/admin/users - Request received');
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    
+    console.log(`GET /api/admin/users - Found ${users.length} users`);
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    // Return an empty array instead of error status to prevent frontend errors
+    res.json([]);
+  }
+});
+
+// Update user role (admin only)
+app.put('/api/admin/users/:id/role', auth, adminAuth, async (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    if (!role || !['user', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    res.json({ success: true, user: { 
+      id: user._id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role 
+    }});
+  } catch (err) {
+    console.error('Error updating user role:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Start MongoDB connection
 async function connectToMongoDB() {
   try {
-    // Try multiple MongoDB connection options
-    let mongoUri = process.env.MONGODB_URI;
+    // Try MongoDB Atlas connection first
+    console.log('Connecting to MongoDB Atlas...');
+    // MongoDB Atlas connection string
+    const mongoUri = 'mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/?retryWrites=true&w=majority&appName=zenly';
     
-    // List of fallback URIs to try
-    const mongoUris = [
-      mongoUri,
-      'mongodb://localhost:27017/zenly',
-      'mongodb://127.0.0.1:27017/zenly'
-    ].filter(Boolean); // Remove undefined/null values
-    
-    let lastError = null;
-    let connected = false;
-    
-    // Try each connection URI
-    for (const uri of mongoUris) {
-      try {
-        console.log(`Attempting to connect to MongoDB at: ${uri.split('@').length > 1 ? uri.split('@')[0] + '@...' : uri}`);
-        await mongoose.connect(uri, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-        });
-        console.log('Connected to MongoDB successfully!');
-        connected = true;
-        break;
-      } catch (err) {
-        console.log(`Connection failed for URI: ${uri.includes('@') ? '(hidden for security)' : uri}`);
-        lastError = err;
-      }
-    }
-    
-    if (!connected) {
-      throw lastError || new Error('All MongoDB connection attempts failed');
-    }
+    console.log('Attempting to connect to MongoDB Atlas...');
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('Connected to MongoDB Atlas successfully!');
 
     // Create a default admin user
     const adminExists = await User.findOne({ email: 'admin@zenly.com' });

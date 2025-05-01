@@ -99,19 +99,25 @@ const AdminPanel = () => {
 
   const fetchData = async () => {
     try {
+      // Ensure auth headers are set before making admin requests
+      if (!isLoggedIn) {
+        await handleAdminLogin();
+      }
+      
+      console.log('Fetching users from API...');
       // Try to fetch users
       const res = await axios.get('/api/admin/users');
       
       // Ensure we have an array of users
       if (Array.isArray(res.data) && res.data.length > 0) {
+        console.log(`Loaded ${res.data.length} users from API`);
         setUsers(res.data);
-        console.log('Loaded users from API:', res.data.length);
       } else {
         console.warn('API returned empty or invalid user data, using fallback data');
-        // Fallback data is already set in the initial state
+        // Keep using fallback data from initial state
       }
       
-      // Mock stats data for demonstration
+      // Update stats
       setStats({
         totalUsers: Array.isArray(res.data) ? res.data.length : users.length,
         totalMoods: 27,
@@ -120,8 +126,12 @@ const AdminPanel = () => {
       });
     } catch (err) {
       console.error('Error fetching user data:', err);
-      // Fallback data is already set in the initial state
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', err.response.data);
+      }
       
+      // Keep fallback data and update stats
       setStats({
         totalUsers: users.length,
         totalMoods: 27,
