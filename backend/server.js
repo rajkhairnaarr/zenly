@@ -149,13 +149,39 @@ app.use('/api/simple', simpleTestRoute);
 // Start MongoDB connection
 async function connectToMongoDB() {
   try {
-    // Connect to MongoDB using the connection string from environment variable
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/zenly';
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('Connected to MongoDB');
+    // Try multiple MongoDB connection options
+    let mongoUri = process.env.MONGODB_URI;
+    
+    // List of fallback URIs to try
+    const mongoUris = [
+      mongoUri,
+      'mongodb://localhost:27017/zenly',
+      'mongodb://127.0.0.1:27017/zenly'
+    ].filter(Boolean); // Remove undefined/null values
+    
+    let lastError = null;
+    let connected = false;
+    
+    // Try each connection URI
+    for (const uri of mongoUris) {
+      try {
+        console.log(`Attempting to connect to MongoDB at: ${uri.split('@').length > 1 ? uri.split('@')[0] + '@...' : uri}`);
+        await mongoose.connect(uri, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        });
+        console.log('Connected to MongoDB successfully!');
+        connected = true;
+        break;
+      } catch (err) {
+        console.log(`Connection failed for URI: ${uri.includes('@') ? '(hidden for security)' : uri}`);
+        lastError = err;
+      }
+    }
+    
+    if (!connected) {
+      throw lastError || new Error('All MongoDB connection attempts failed');
+    }
 
     // Create a default admin user
     const adminExists = await User.findOne({ email: 'admin@zenly.com' });
@@ -174,8 +200,6 @@ async function connectToMongoDB() {
   } catch (err) {
     console.error('MongoDB connection error:', err);
     // Don't throw the error, just log it
-    // This allows the app to continue even if MongoDB connection fails
-    // The app will try to reconnect on the next request
   }
 }
 
@@ -289,11 +313,17 @@ async function startServer() {
     // Get all meditations
     app.get('/api/meditations', async (req, res) => {
       try {
+        console.log('GET /api/meditations - Request received');
         const meditations = await Meditation.find().sort({ createdAt: -1 });
-        res.json(meditations);
+        
+        console.log(`GET /api/meditations - Found ${meditations.length} meditations`);
+        
+        // Always return an array
+        res.json(meditations || []);
       } catch (err) {
         console.error('Error fetching meditations:', err);
-        res.status(500).json({ message: 'Server error' });
+        // Return an empty array instead of an error status
+        res.json([]);
       }
     });
     
