@@ -12,6 +12,10 @@ import {
   BoltIcon,
 } from '@heroicons/react/24/outline';
 
+// Define a variable at global scope to avoid unintentional shadowing
+// This will also help catch any references to an undefined global
+const defaultUserName = 'User';
+
 const Dashboard = () => {
   const [stats, setStats] = useState({
     meditationCount: 0,
@@ -21,7 +25,7 @@ const Dashboard = () => {
   });
   const [greeting, setGreeting] = useState('');
   const [quote, setQuote] = useState({ text: '', author: '' });
-  const [userName, setUserName] = useState('User');
+  const [dashboardUserName, setDashboardUserName] = useState(defaultUserName);
 
   useEffect(() => {
     // Set greeting based on time of day
@@ -41,8 +45,8 @@ const Dashboard = () => {
     setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     // Try to get user name from localStorage or other sources
-    const storedUserName = localStorage.getItem('userName') || 'User';
-    setUserName(storedUserName);
+    const storedUserName = localStorage.getItem('userName') || defaultUserName;
+    setDashboardUserName(storedUserName);
 
     // For now, we'll just set some mock values
     setStats({
@@ -86,7 +90,9 @@ const Dashboard = () => {
   return (
     <div className="space-y-12">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome to Zenly, {userName}</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Welcome to Zenly, {dashboardUserName || defaultUserName}
+        </h1>
         <p className="mt-2 text-gray-600">
           Your personal space for mindfulness and mental well-being.
         </p>
