@@ -141,7 +141,7 @@ const Dashboard = () => {
         
         <div className="flex justify-center">
           <Link
-            to="/onboarding"
+            to="/mood"
             className="bg-white hover:bg-blue-50 text-blue-600 font-semibold px-8 py-3 rounded-full shadow-lg transform transition-all hover:scale-105 flex items-center space-x-2"
           >
             <BoltIcon className="h-5 w-5" />
