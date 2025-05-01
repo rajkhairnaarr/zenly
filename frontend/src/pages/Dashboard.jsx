@@ -85,6 +85,15 @@ const Dashboard = () => {
       iconColor: 'text-blue-600',
       image: '📝',
     },
+    {
+      name: 'Mood Check',
+      description: 'How are you feeling right now?',
+      icon: BoltIcon,
+      link: '/onboarding',
+      color: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      image: '🌈',
+    },
   ];
 
   return (

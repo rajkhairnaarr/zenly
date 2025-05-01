@@ -12,6 +12,17 @@ import Journal from './pages/Journal';
 import MeditationLibrary from './pages/MeditationLibrary';
 import AdminPanel from './pages/AdminPanel';
 import AboutUs from './pages/AboutUs';
+import OnboardingPage from './pages/OnboardingPage';
+import { 
+  EnergeticExperience, 
+  AnxiousExperience, 
+  DepressedExperience, 
+  LethargicExperience,
+  SadExperience,
+  LonelyExperience,
+  BoredExperience,
+  ChillExperience
+} from './components/MoodExperiences';
 
 // Inner component to access AuthContext
 function AppContent() {
@@ -52,6 +63,18 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            
+            {/* Mood Experience Routes */}
+            <Route path="/energetic" element={<EnergeticExperience />} />
+            <Route path="/anxious" element={<AnxiousExperience />} />
+            <Route path="/depressed" element={<DepressedExperience />} />
+            <Route path="/lethargic" element={<LethargicExperience />} />
+            <Route path="/sad" element={<SadExperience />} />
+            <Route path="/lonely" element={<LonelyExperience />} />
+            <Route path="/bored" element={<BoredExperience />} />
+            <Route path="/chill" element={<ChillExperience />} />
+            
             <Route path="/" element={
               <PrivateRoute>
                 <Dashboard />
