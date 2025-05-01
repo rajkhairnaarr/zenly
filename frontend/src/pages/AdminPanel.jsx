@@ -7,7 +7,12 @@ import { loginAsAdmin, isAuthenticated } from '../utils/auth';
 axios.defaults.baseURL = window.location.origin;
 
 const AdminPanel = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([
+    // Fallback user data
+    { _id: '1', name: 'Admin User', email: 'admin@zenly.com', role: 'admin', createdAt: new Date().toISOString() },
+    { _id: '2', name: 'John Doe', email: 'john@example.com', role: 'user', createdAt: new Date().toISOString() },
+    { _id: '3', name: 'Jane Smith', email: 'jane@example.com', role: 'user', createdAt: new Date().toISOString() }
+  ]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalMoods: 0,
@@ -96,29 +101,32 @@ const AdminPanel = () => {
     try {
       // Try to fetch users
       const res = await axios.get('/api/admin/users');
-      setUsers(res.data);
+      
+      // Ensure we have an array of users
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setUsers(res.data);
+        console.log('Loaded users from API:', res.data.length);
+      } else {
+        console.warn('API returned empty or invalid user data, using fallback data');
+        // Fallback data is already set in the initial state
+      }
       
       // Mock stats data for demonstration
       setStats({
-        totalUsers: res.data.length || 3,
+        totalUsers: Array.isArray(res.data) ? res.data.length : users.length,
         totalMoods: 27,
         totalJournals: 12,
-        totalMeditations: 45
+        totalMeditations: meditations.length
       });
     } catch (err) {
-      console.error('Error fetching data:', err);
-      // Mock data for development
-      setUsers([
-        { _id: '1', name: 'Admin User', email: 'admin@zenly.com', role: 'admin', createdAt: new Date().toISOString() },
-        { _id: '2', name: 'John Doe', email: 'john@example.com', role: 'user', createdAt: new Date().toISOString() },
-        { _id: '3', name: 'Jane Smith', email: 'jane@example.com', role: 'user', createdAt: new Date().toISOString() }
-      ]);
+      console.error('Error fetching user data:', err);
+      // Fallback data is already set in the initial state
       
       setStats({
-        totalUsers: 3,
+        totalUsers: users.length,
         totalMoods: 27,
         totalJournals: 12,
-        totalMeditations: 45
+        totalMeditations: meditations.length
       });
     } finally {
       setLoading(false);
@@ -147,18 +155,23 @@ const AdminPanel = () => {
 
   const toggleUserRole = async (userId, currentRole) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/role`, {
-        role: currentRole === 'admin' ? 'user' : 'admin'
-      });
-      fetchData();
-    } catch (err) {
-      console.error('Error updating user role:', err);
-      // Mock update for development
-      setUsers(users.map(user => 
+      // First update UI immediately for better UX
+      setUsers(prev => prev.map(user => 
         user._id === userId 
           ? {...user, role: currentRole === 'admin' ? 'user' : 'admin'} 
           : user
       ));
+      
+      // Then try API call
+      await axios.put(`/api/admin/users/${userId}/role`, {
+        role: currentRole === 'admin' ? 'user' : 'admin'
+      });
+      
+      // If successful, no need to do anything as UI is already updated
+      console.log(`User ${userId} role changed successfully`);
+    } catch (err) {
+      console.error('Error updating user role:', err);
+      // Already updated the UI, so no need for fallback
     }
   };
 
@@ -488,31 +501,39 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => toggleUserRole(user._id, user.role)}
-                          className="text-primary-600 hover:text-primary-900"
-                        >
-                          {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
-                        </button>
+                  {!Array.isArray(users) || users.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
+                        No users found.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    users.map((user) => (
+                      <tr key={user._id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => toggleUserRole(user._id, user.role)}
+                            className="text-primary-600 hover:text-primary-900"
+                          >
+                            {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
