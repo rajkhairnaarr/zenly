@@ -348,7 +348,8 @@ const GlobalStyles = () => (
 // import { GlobalStyles } from './components/MoodExperiences';
 // function App() { return (<> <GlobalStyles /> {/* rest of app */} </>); } 
 
-// Re-export all components
+// Re-export all components - REMOVED this block as components are already exported individually
+/*
 export {
   MoodExperienceLayout,
   EnergeticExperience,
@@ -360,4 +361,5 @@ export {
   ChillExperience,
   DepressedExperience,
   GlobalStyles // Export the styles
-}; 
+};
+*/ 
