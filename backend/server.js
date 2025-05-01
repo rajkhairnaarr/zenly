@@ -151,9 +151,23 @@ app.use('/api/simple', simpleTestRoute);
 app.get('/api/admin/users', auth, adminAuth, async (req, res) => {
   try {
     console.log('GET /api/admin/users - Request received');
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    
+    // Clear any query cache to ensure fresh data
+    mongoose.connection.db.collection('users').find().toArray = mongoose.connection.db.collection('users').find().toArray.purgeQueryCache;
+    
+    // Find all users, excluding password field, and sort by newest first
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean(); // Using lean() for better performance
     
     console.log(`GET /api/admin/users - Found ${users.length} users`);
+    
+    // Add cache control header to prevent browser caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.json(users);
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -260,6 +274,8 @@ async function startServer() {
           email,
           password
         });
+        
+        console.log(`New user registered: ${name} (${email}), ID: ${newUser._id}`);
         
         // Create JWT token
         const token = jwt.sign(

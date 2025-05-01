@@ -10,9 +10,11 @@ export const setToken = (token) => {
   if (token) {
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log('Auth token set in axios defaults');
   } else {
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
+    console.log('Auth token removed from axios defaults');
   }
 };
 
@@ -33,13 +35,17 @@ export const loginUser = async (email, password) => {
 // Login with admin credentials (for development/testing)
 export const loginAsAdmin = async () => {
   try {
-    return await loginUser('admin@zenly.com', 'admin123');
+    console.log('Attempting admin login...');
+    const result = await loginUser('admin@zenly.com', 'admin123');
+    console.log('Admin login successful:', result);
+    return result;
   } catch (err) {
     console.error('Admin login failed:', err);
     
     // For demo purposes, simulate a successful login
     const mockAdminToken = 'mock-admin-token-for-demo';
     setToken(mockAdminToken);
+    console.log('Using mock admin token');
     
     return {
       id: 'admin-id',
@@ -60,6 +66,17 @@ export const initAuth = () => {
   const token = getToken();
   if (token) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Add a random parameter to prevent caching
+    axios.interceptors.request.use(config => {
+      if (config.method === 'get') {
+        // Add timestamp to GET requests to prevent caching
+        config.params = {
+          ...config.params,
+          _t: Date.now()
+        };
+      }
+      return config;
+    });
     return true;
   }
   return false;

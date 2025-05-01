@@ -58,6 +58,7 @@ const AdminPanel = () => {
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     // Ensure admin login before loading data
@@ -66,7 +67,7 @@ const AdminPanel = () => {
     }
     fetchData();
     fetchMeditations();
-  }, [isLoggedIn]);
+  }, [isLoggedIn, refreshTrigger]);
 
   // Add debugging for API calls
   useEffect(() => {
@@ -105,8 +106,9 @@ const AdminPanel = () => {
       }
       
       console.log('Fetching users from API...');
-      // Try to fetch users
-      const res = await axios.get('/api/admin/users');
+      // Try to fetch users with timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      const res = await axios.get(`/api/admin/users?t=${timestamp}`);
       
       // Ensure we have an array of users
       if (Array.isArray(res.data) && res.data.length > 0) {
@@ -333,6 +335,12 @@ const AdminPanel = () => {
     }
   };
 
+  // Add manual refresh function
+  const refreshData = () => {
+    setLoading(true);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -491,7 +499,23 @@ const AdminPanel = () => {
         
         {activeTab === 'users' && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">User Management</h2>
+            <div className="flex justify-between mb-6">
+              <h2 className="text-2xl font-bold">User Management</h2>
+              <button 
+                onClick={refreshData} 
+                className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 flex items-center"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                Refresh Users
+              </button>
+            </div>
             <div className="bg-white shadow rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
