@@ -62,6 +62,7 @@ export default {
         'petal-fall': 'fall 8s linear infinite',
         'water-flow': 'water 4s ease-in-out infinite',
         'glow': 'glow 2s ease-in-out infinite',
+        'water-ripple': 'water-ripple 3s ease-in-out infinite',
       },
       keyframes: {
         float: {
@@ -79,6 +80,11 @@ export default {
         glow: {
           '0%, 100%': { opacity: '0.7', boxShadow: '0 0 5px rgba(255, 255, 0, 0.5)' },
           '50%': { opacity: '1', boxShadow: '0 0 15px rgba(255, 255, 0, 0.8)' },
+        },
+        'water-ripple': {
+          '0%': { transform: 'scale(0.97)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.03)', opacity: '0.9' }, 
+          '100%': { transform: 'scale(0.97)', opacity: '0.7' },
         },
       },
     },
