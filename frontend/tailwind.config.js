@@ -58,6 +58,28 @@ export default {
       animation: {
         'bounce-slow': 'bounce 3s infinite',
         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 10s ease-in-out infinite',
+        'petal-fall': 'fall 8s linear infinite',
+        'water-flow': 'water 4s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0) translateX(0)', opacity: '0.6' },
+          '50%': { transform: 'translateY(-20px) translateX(10px)', opacity: '0.9' },
+        },
+        fall: {
+          '0%': { transform: 'translateY(0) rotate(0deg)', opacity: '0.8' },
+          '100%': { transform: 'translateY(100px) rotate(360deg)', opacity: '0' },
+        },
+        water: {
+          '0%, 100%': { transform: 'translateY(0)', opacity: '0.7' },
+          '50%': { transform: 'translateY(-2px)', opacity: '0.9' },
+        },
+        glow: {
+          '0%, 100%': { opacity: '0.7', boxShadow: '0 0 5px rgba(255, 255, 0, 0.5)' },
+          '50%': { opacity: '1', boxShadow: '0 0 15px rgba(255, 255, 0, 0.8)' },
+        },
       },
     },
   },

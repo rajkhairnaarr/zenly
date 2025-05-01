@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import TreeGrowth from '../components/TreeGrowth';
+import Garden3D from '../components/Garden3D';
 import {
   BookOpenIcon,
   HeartIcon,
@@ -98,10 +98,10 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Tree Growth Component */}
+      {/* 3D Garden Visualization Component */}
       <section>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Meditation Journey</h2>
-        <TreeGrowth />
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Meditation Garden</h2>
+        <Garden3D streak={stats.streak} />
       </section>
 
       {/* Hero Section with Illustration */}
