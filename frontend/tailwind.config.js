@@ -63,6 +63,7 @@ export default {
         'water-flow': 'water 4s ease-in-out infinite',
         'glow': 'glow 2s ease-in-out infinite',
         'water-ripple': 'water-ripple 3s ease-in-out infinite',
+        'fadeIn': 'fadeIn 0.6s ease-in-out',
       },
       keyframes: {
         float: {
@@ -86,6 +87,16 @@ export default {
           '50%': { transform: 'scale(1.03)', opacity: '0.9' }, 
           '100%': { transform: 'scale(0.97)', opacity: '0.7' },
         },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
+      },
+      boxShadow: {
+        'glow': '0 0 15px rgba(255, 255, 255, 0.8)',
       },
     },
   },
