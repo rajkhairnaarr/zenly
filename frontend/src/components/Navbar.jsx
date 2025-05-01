@@ -18,6 +18,7 @@ const Navbar = () => {
     { name: 'Mood Tracker', href: '/mood', current: false },
     { name: 'Journal', href: '/journal', current: false },
     { name: 'Meditations', href: '/meditations', current: false },
+    { name: 'About Us', href: '/about', current: false },
   ];
 
   if (user?.role === 'admin') {
@@ -209,4 +210,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

@@ -12,9 +12,22 @@ const AdminPanel = () => {
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [meditations, setMeditations] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    duration: 5,
+    audioUrl: '',
+    category: 'guided',
+    type: 'guided',
+    isPremium: false
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     fetchData();
+    fetchMeditations();
   }, []);
 
   const fetchData = async () => {
@@ -51,6 +64,44 @@ const AdminPanel = () => {
     }
   };
 
+  const fetchMeditations = async () => {
+    try {
+      setLoading(true);
+      const backendPort = localStorage.getItem('backendPort') || '5001';
+      const res = await axios.get(`http://localhost:${backendPort}/api/meditations`);
+      setMeditations(res.data);
+    } catch (err) {
+      console.error('Error fetching meditations:', err);
+      // Example meditations for demo purposes
+      setMeditations([
+        {
+          _id: '1',
+          title: 'Breathing Meditation',
+          description: 'Focus on your breath to calm your mind and body.',
+          duration: 5,
+          audioUrl: 'https://example.com/audio/breathing.mp3',
+          category: 'breathing',
+          type: 'in-app',
+          isPremium: false,
+          createdAt: '2023-01-15T12:00:00Z'
+        },
+        {
+          _id: '2',
+          title: 'Body Scan',
+          description: 'Gradually focus your attention on different parts of your body.',
+          duration: 10,
+          audioUrl: 'https://example.com/audio/bodyscan.mp3',
+          category: 'guided',
+          type: 'in-app',
+          isPremium: false,
+          createdAt: '2023-02-20T14:30:00Z'
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleUserRole = async (userId, currentRole) => {
     try {
       const backendPort = localStorage.getItem('backendPort') || '5001';
@@ -67,6 +118,107 @@ const AdminPanel = () => {
           : user
       ));
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.title.trim()) errors.title = 'Title is required';
+    if (!formData.description.trim()) errors.description = 'Description is required';
+    if (!formData.audioUrl.trim()) errors.audioUrl = 'Audio URL is required';
+    if (formData.duration < 1) errors.duration = 'Duration must be at least 1 minute';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    try {
+      const backendPort = localStorage.getItem('backendPort') || '5001';
+      if (editingId) {
+        await axios.put(`http://localhost:${backendPort}/api/meditations/${editingId}`, formData);
+      } else {
+        await axios.post(`http://localhost:${backendPort}/api/meditations`, formData);
+      }
+      
+      // Update local state
+      if (editingId) {
+        setMeditations(prev => prev.map(m => m._id === editingId ? { ...formData, _id: editingId } : m));
+      } else {
+        const newMeditation = {
+          ...formData,
+          _id: Date.now().toString(), // Temporary ID for frontend
+          createdAt: new Date().toISOString()
+        };
+        setMeditations(prev => [...prev, newMeditation]);
+      }
+      
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        duration: 5,
+        audioUrl: '',
+        category: 'guided',
+        type: 'guided',
+        isPremium: false
+      });
+      setEditingId(null);
+      
+    } catch (err) {
+      console.error('Error saving meditation:', err);
+      alert('Error saving meditation. Please try again.');
+    }
+  };
+
+  const handleEdit = (meditation) => {
+    setFormData({
+      title: meditation.title,
+      description: meditation.description,
+      duration: meditation.duration,
+      audioUrl: meditation.audioUrl,
+      category: meditation.category,
+      type: meditation.type || 'guided',
+      isPremium: meditation.isPremium
+    });
+    setEditingId(meditation._id);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this meditation?')) return;
+    
+    try {
+      const backendPort = localStorage.getItem('backendPort') || '5001';
+      await axios.delete(`http://localhost:${backendPort}/api/meditations/${id}`);
+      setMeditations(prev => prev.filter(m => m._id !== id));
+    } catch (err) {
+      console.error('Error deleting meditation:', err);
+      alert('Error deleting meditation. Please try again.');
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      title: '',
+      description: '',
+      duration: 5,
+      audioUrl: '',
+      category: 'guided',
+      type: 'guided',
+      isPremium: false
+    });
+    setEditingId(null);
+    setFormErrors({});
   };
 
   if (loading) {

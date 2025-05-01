@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import BreathingVisualizer from '../components/BreathingVisualizer';
+import BreathingSettings from '../components/BreathingSettings';
 
 const MeditationLibrary = () => {
   const [meditations, setMeditations] = useState([]);
@@ -8,6 +10,11 @@ const MeditationLibrary = () => {
   const [activeSession, setActiveSession] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [sessionStep, setSessionStep] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [breathingSettings, setBreathingSettings] = useState({
+    inhaleDuration: 4,
+    exhaleDuration: 6
+  });
 
   const guidedMeditations = [
     {
@@ -30,6 +37,76 @@ const MeditationLibrary = () => {
       description: "Start your day with this energizing 12-minute meditation to cultivate positive energy.",
       thumbnail: `https://img.youtube.com/vi/PIAWiBZ_ZZM/mqdefault.jpg`,
       duration: "12:00"
+    },
+    {
+      id: "O-6f5wQXSu8",
+      title: "Meditation for Deep Sleep",
+      description: "A gentle 20-minute meditation to help you fall into a deep, restful sleep.",
+      thumbnail: `https://img.youtube.com/vi/O-6f5wQXSu8/mqdefault.jpg`,
+      duration: "20:00"
+    },
+    {
+      id: "inpok4MKVLM",
+      title: "5-Minute Meditation for Busy Days",
+      description: "A quick 5-minute meditation to center yourself during hectic days.",
+      thumbnail: `https://img.youtube.com/vi/inpok4MKVLM/mqdefault.jpg`,
+      duration: "5:00"
+    },
+    {
+      id: "cZrrfQIDrGk",
+      title: "Guided Chakra Balance Meditation",
+      description: "A 25-minute meditation to align and balance your energy centers.",
+      thumbnail: `https://img.youtube.com/vi/cZrrfQIDrGk/mqdefault.jpg`,
+      duration: "25:00"
+    },
+    {
+      id: "wruCWicGBA4",
+      title: "Nature Sounds Meditation",
+      description: "Relax with calming nature sounds in this 15-minute guided meditation.",
+      thumbnail: `https://img.youtube.com/vi/wruCWicGBA4/mqdefault.jpg`,
+      duration: "15:00"
+    },
+    {
+      id: "EwQkfoKxjuo",
+      title: "Body Awareness Meditation",
+      description: "A 12-minute meditation to increase awareness of bodily sensations.",
+      thumbnail: `https://img.youtube.com/vi/EwQkfoKxjuo/mqdefault.jpg`,
+      duration: "12:00"
+    },
+    {
+      id: "7LrF4F9iKoc",
+      title: "Gratitude Meditation",
+      description: "Cultivate gratitude and appreciation with this 10-minute guided practice.",
+      thumbnail: `https://img.youtube.com/vi/7LrF4F9iKoc/mqdefault.jpg`,
+      duration: "10:00"
+    },
+    {
+      id: "L3zP9P9AjnA",
+      title: "Meditation for Self-Acceptance",
+      description: "A loving 18-minute meditation to develop self-acceptance and compassion.",
+      thumbnail: `https://img.youtube.com/vi/L3zP9P9AjnA/mqdefault.jpg`,
+      duration: "18:00"
+    },
+    {
+      id: "nAzQHnDsbOE",
+      title: "Breath Awareness Meditation",
+      description: "Focus on your breath with this centering 8-minute meditation.",
+      thumbnail: `https://img.youtube.com/vi/nAzQHnDsbOE/mqdefault.jpg`,
+      duration: "8:00"
+    },
+    {
+      id: "SzJn0WQJQQA",
+      title: "Evening Relaxation Meditation",
+      description: "Wind down with this calming 15-minute evening meditation practice.",
+      thumbnail: `https://img.youtube.com/vi/SzJn0WQJQQA/mqdefault.jpg`,
+      duration: "15:00"
+    },
+    {
+      id: "QHkXvPq2pQE",
+      title: "Walking Meditation Guide",
+      description: "Learn the practice of mindful walking in this 10-minute guided meditation.",
+      thumbnail: `https://img.youtube.com/vi/QHkXvPq2pQE/mqdefault.jpg`,
+      duration: "10:00"
     }
   ];
 
@@ -55,6 +132,41 @@ const MeditationLibrary = () => {
       "Silently repeat: 'May you be happy. May you be healthy. May you be safe.'",
       "Extend these wishes to yourself, then to others you know, then to all beings.",
       "Feel the warmth of compassion radiating from your heart in all directions."
+    ],
+    "4": [
+      "Sit comfortably and focus on your breath for a few moments.",
+      "Notice the natural rhythm of your heartbeat.",
+      "Place one hand over your heart and breathe deeply into this area.",
+      "With each exhale, imagine releasing stress and tension.",
+      "Feel a sense of gratitude and appreciation growing with each breath."
+    ],
+    "5": [
+      "Close your eyes and draw your attention to sounds around you.",
+      "Notice each sound without judgment, simply observing.",
+      "Gradually narrow your focus to sounds closest to you.",
+      "Then bring awareness to the sound of your own breath.",
+      "Finally, notice the subtle sounds of silence between breaths."
+    ],
+    "6": [
+      "Begin by focusing on the sensation of your feet touching the ground.",
+      "Notice the weight, pressure, and temperature of this contact.",
+      "Slowly shift your awareness to your breath, feeling each inhale and exhale.",
+      "Observe any thoughts that arise, acknowledging them without attachment.",
+      "Return to your breath whenever your mind begins to wander."
+    ],
+    "7": [
+      "Bring your awareness to the sky and visualize it as clear, vast, and blue.",
+      "Notice thoughts as clouds passing through this sky, not affecting its nature.",
+      "Observe each thought-cloud without getting caught up in its story.",
+      "Return attention to the ever-present, spacious awareness behind all experience.",
+      "Rest in this open awareness, allowing all sensations to naturally arise and pass."
+    ],
+    "8": [
+      "Begin by taking three deep breaths, exhaling completely each time.",
+      "Now breathe normally and count each breath cycle from one to ten.",
+      "If you lose count, simply begin again at one without judgment.",
+      "Notice the quality of each breath - is it deep or shallow, smooth or irregular?",
+      "Allow your breathing to become increasingly relaxed and natural."
     ]
   };
 
@@ -96,19 +208,57 @@ const MeditationLibrary = () => {
           _id: '1',
           title: 'Breathing Meditation',
           description: 'Focus on your breath to calm your mind and body.',
-          duration: 5
+          duration: 5,
+          type: 'in-app'
         },
         {
           _id: '2',
           title: 'Body Scan',
           description: 'Gradually focus your attention on different parts of your body.',
-          duration: 10
+          duration: 10,
+          type: 'in-app'
         },
         {
           _id: '3',
           title: 'Loving-Kindness Meditation',
           description: 'Develop feelings of goodwill, kindness, and warmth towards others.',
-          duration: 15
+          duration: 15,
+          type: 'in-app'
+        },
+        {
+          _id: '4',
+          title: 'Gratitude Meditation',
+          description: 'Cultivate appreciation and thankfulness for life\'s blessings.',
+          duration: 8,
+          type: 'in-app'
+        },
+        {
+          _id: '5',
+          title: 'Sound Awareness',
+          description: 'Develop mindfulness by focusing on the sounds around you.',
+          duration: 7,
+          type: 'in-app'
+        },
+        {
+          _id: '6',
+          title: 'Grounding Meditation',
+          description: 'Connect with the present moment through physical awareness.',
+          duration: 6,
+          type: 'in-app'
+        },
+        {
+          _id: '7',
+          title: 'Open Awareness',
+          description: 'Expand your consciousness to observe all experiences without judgment.',
+          duration: 12,
+          type: 'in-app'
+        },
+        {
+          _id: '8',
+          title: 'Counted Breath Meditation',
+          description: 'Calm the mind by counting breath cycles from one to ten.',
+          duration: 9,
+          type: 'in-app'
         }
       ]);
     } finally {
@@ -186,6 +336,36 @@ const MeditationLibrary = () => {
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
+            
+            {activeSession.type === 'in-app' && (
+              <div className="mb-8">
+                <BreathingVisualizer 
+                  isActive={true} 
+                  inhaleDuration={breathingSettings.inhaleDuration}
+                  exhaleDuration={breathingSettings.exhaleDuration}
+                />
+                
+                {showSettings ? (
+                  <div className="mt-8">
+                    <BreathingSettings 
+                      defaultInhale={breathingSettings.inhaleDuration}
+                      defaultExhale={breathingSettings.exhaleDuration}
+                      onSave={(settings) => {
+                        setBreathingSettings(settings);
+                        setShowSettings(false);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="mt-4 text-sm text-primary-600 hover:text-primary-800 underline"
+                  >
+                    Adjust Breathing Pattern
+                  </button>
+                )}
+              </div>
+            )}
             
             <div className="text-xl text-center text-gray-700 mb-8 max-w-md">
               {currentInstruction}

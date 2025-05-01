@@ -5,6 +5,7 @@
 @layer base {
 body {
     @apply bg-gray-50 text-gray-900;
+    font-family: 'Inter', sans-serif;
 }
 }
 
@@ -21,4 +22,49 @@ body {
   .input {
     @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
   }
+}
+
+/* Tree Growth Component Styles */
+.bg-brown-600 {
+  background-color: #8B4513;
+}
+
+.bg-brown-700 {
+  background-color: #7B3C11;
+}
+
+.bg-brown-800 {
+  background-color: #6B330F;
+}
+
+.bg-brown-900 {
+  background-color: #5B2A0D;
+}
+
+.bg-pattern-snow {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.5) 2px, transparent 2px);
+  background-size: 24px 24px;
+  animation: snowfall 5s linear infinite;
+}
+
+@keyframes snowfall {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 24px 24px;
+  }
+}
+
+/* Additional animations */
+.-mt-96 {
+  margin-top: -24rem;
+}
+
+.-mt-112 {
+  margin-top: -28rem;
+}
+
+.-mt-128 {
+  margin-top: -32rem;
 }

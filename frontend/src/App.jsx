@@ -11,6 +11,7 @@ import MoodTracker from './pages/MoodTracker';
 import Journal from './pages/Journal';
 import MeditationLibrary from './pages/MeditationLibrary';
 import AdminPanel from './pages/AdminPanel';
+import AboutUs from './pages/AboutUs';
 
 // Inner component to access AuthContext
 function AppContent() {
@@ -50,6 +51,7 @@ function AppContent() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/about" element={<AboutUs />} />
             <Route path="/" element={
               <PrivateRoute>
                 <Dashboard />

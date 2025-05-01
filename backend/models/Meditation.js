@@ -21,7 +21,21 @@ const MeditationSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Please add a category'],
-    enum: ['guided', 'music', 'nature', 'breathing'],
+    enum: ['guided', 'music', 'nature', 'breathing', 'in-app'],
+  },
+  type: {
+    type: String,
+    required: [true, 'Please specify the meditation type'],
+    enum: ['guided', 'in-app'],
+    default: 'guided'
+  },
+  instructions: {
+    type: [String],
+    default: []
+  },
+  thumbnail: {
+    type: String,
+    default: ''
   },
   isPremium: {
     type: Boolean,

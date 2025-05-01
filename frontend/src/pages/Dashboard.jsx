@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import TreeGrowth from '../components/TreeGrowth';
 import {
   BookOpenIcon,
   HeartIcon,
@@ -78,7 +79,20 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome to Zenly, {userName}</h1>
+        <p className="mt-2 text-gray-600">
+          Your personal space for mindfulness and mental well-being.
+        </p>
+      </div>
+
+      {/* Tree Growth Component */}
+      <section>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Meditation Journey</h2>
+        <TreeGrowth />
+      </section>
+
       {/* Hero Section with Illustration */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary-600 to-primary-800 text-white shadow-xl">
         <div className="absolute right-0 top-0 -mt-10 -mr-20 h-[350px] w-[350px] rounded-full bg-primary-500 opacity-20"></div>
