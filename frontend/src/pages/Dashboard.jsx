@@ -21,6 +21,7 @@ const Dashboard = () => {
   });
   const [greeting, setGreeting] = useState('');
   const [quote, setQuote] = useState({ text: '', author: '' });
+  const [userName, setUserName] = useState('User');
 
   useEffect(() => {
     // Set greeting based on time of day
@@ -38,6 +39,10 @@ const Dashboard = () => {
       { text: "You are the sky. Everything else is just the weather.", author: "Pema Chödrön" }
     ];
     setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+
+    // Try to get user name from localStorage or other sources
+    const storedUserName = localStorage.getItem('userName') || 'User';
+    setUserName(storedUserName);
 
     // For now, we'll just set some mock values
     setStats({
