@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import PixelGarden from '../components/PixelGarden';
+import ZenGarden from '../components/ZenGarden';
 import {
   BookOpenIcon,
   HeartIcon,
@@ -98,10 +98,10 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Pixel Garden Visualization */}
+      {/* Zen Garden Visualization */}
       <section>
         <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Meditation Garden</h2>
-        <PixelGarden streak={stats.streak} />
+        <ZenGarden streak={stats.streak} isDarkMode={false} />
       </section>
 
       {/* Hero Section with Illustration */}
