@@ -94,28 +94,6 @@ const Login = () => {
           </div>
         </form>
 
-        {/* Admin Credentials */}
-        <div className="border-t border-gray-200 pt-4">
-          <button
-            onClick={toggleAdminInfo}
-            className="text-primary-600 text-sm flex items-center hover:text-primary-500 focus:outline-none"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 transition-transform ${showAdminInfo ? 'rotate-90' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            Admin Credentials
-          </button>
-          
-          {showAdminInfo && (
-            <div className="mt-2 p-3 bg-gray-50 rounded-md border border-gray-200 text-sm">
-              <p className="font-medium text-gray-700 mb-1">Admin Login:</p>
-              <p className="text-gray-600">Email: admin@zenly.com</p>
-              <p className="text-gray-600">Password: admin123</p>
-              <p className="mt-2 text-xs text-gray-500">Use these credentials to access the admin panel.</p>
-            </div>
-          )}
-        </div>
-
         <div className="flex flex-col space-y-4">
           <button
             onClick={handleGuestLogin}

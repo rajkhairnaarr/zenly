@@ -139,7 +139,7 @@ const Dashboard = () => {
           <p className="text-gray-600 mt-2">Taking a moment to check in with yourself can improve your well-being</p>
         </div>
         
-        <div className="flex justify-center">
+        <div className="flex justify-center space-x-4">
           <Link
             to="/mood"
             className="bg-white hover:bg-blue-50 text-blue-600 font-semibold px-8 py-3 rounded-full shadow-lg transform transition-all hover:scale-105 flex items-center space-x-2"
@@ -147,6 +147,14 @@ const Dashboard = () => {
             <BoltIcon className="h-5 w-5" />
             <span>Check Your Mood</span>
             <span className="text-xl ml-2">🌈</span>
+          </Link>
+          <Link
+            to="/onboarding"
+            className="bg-white hover:bg-purple-50 text-purple-600 font-semibold px-8 py-3 rounded-full shadow-lg transform transition-all hover:scale-105 flex items-center space-x-2"
+          >
+            <HeartIcon className="h-5 w-5" />
+            <span>Mood Journey</span>
+            <span className="text-xl ml-2">✨</span>
           </Link>
         </div>
       </div>

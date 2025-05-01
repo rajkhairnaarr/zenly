@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaceSmileIcon, FaceFrownIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { MinusCircleIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 
 const MoodTracker = () => {
   const [moods, setMoods] = useState([]);
