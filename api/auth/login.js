@@ -20,20 +20,30 @@ module.exports = async (req, res) => {
     
     // Validate input
     if (!email || !password) {
+      console.log('Login failed: Missing email or password');
       return res.status(400).json({ message: 'Please enter all fields' });
     }
     
     // Find user by email, including the password field
+    console.log(`Looking for user with email: ${email}`);
     const user = await UserQueries.findUserByEmail(email, true);
+    
     if (!user) {
+      console.log(`Login failed: No user found with email ${email}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
+    console.log(`User found: ${user.email}, role: ${user.role}, checking password...`);
+    
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
+    
     if (!isMatch) {
+      console.log('Login failed: Password does not match');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    console.log('Password matched, creating JWT token...');
     
     // Create JWT token
     const token = jwt.sign(
