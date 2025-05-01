@@ -3,48 +3,40 @@ const mongoose = require('mongoose');
 const MeditationSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, 'Please add a title'],
-    trim: true,
+    required: true,
+    trim: true
   },
   description: {
     type: String,
-    required: [true, 'Please add a description'],
+    required: true
   },
   duration: {
     type: Number,
-    required: [true, 'Please add duration in minutes'],
+    required: true,
+    min: 1
   },
   audioUrl: {
     type: String,
-    required: [true, 'Please add an audio URL'],
+    required: true
   },
   category: {
     type: String,
-    required: [true, 'Please add a category'],
-    enum: ['guided', 'music', 'nature', 'breathing', 'in-app'],
+    enum: ['guided', 'breathing', 'sleep', 'focus', 'mindfulness'],
+    default: 'guided'
   },
   type: {
     type: String,
-    required: [true, 'Please specify the meditation type'],
     enum: ['guided', 'in-app'],
     default: 'guided'
   },
-  instructions: {
-    type: [String],
-    default: []
-  },
-  thumbnail: {
-    type: String,
-    default: ''
-  },
   isPremium: {
     type: Boolean,
-    default: false,
+    default: false
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-  },
+    default: Date.now
+  }
 });
 
 module.exports = mongoose.model('Meditation', MeditationSchema); 

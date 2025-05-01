@@ -33,8 +33,7 @@ const AdminPanel = () => {
   const fetchData = async () => {
     try {
       // Try to fetch users
-      const backendPort = localStorage.getItem('backendPort') || '5001';
-      const res = await axios.get(`http://localhost:${backendPort}/admin/users`);
+      const res = await axios.get('/api/admin/users');
       setUsers(res.data);
       
       // Mock stats data for demonstration
@@ -67,8 +66,7 @@ const AdminPanel = () => {
   const fetchMeditations = async () => {
     try {
       setLoading(true);
-      const backendPort = localStorage.getItem('backendPort') || '5001';
-      const res = await axios.get(`http://localhost:${backendPort}/api/meditations`);
+      const res = await axios.get('/api/meditations');
       setMeditations(res.data);
     } catch (err) {
       console.error('Error fetching meditations:', err);
@@ -104,8 +102,7 @@ const AdminPanel = () => {
 
   const toggleUserRole = async (userId, currentRole) => {
     try {
-      const backendPort = localStorage.getItem('backendPort') || '5001';
-      await axios.put(`http://localhost:${backendPort}/admin/users/${userId}/role`, {
+      await axios.put(`/api/admin/users/${userId}/role`, {
         role: currentRole === 'admin' ? 'user' : 'admin'
       });
       fetchData();
@@ -144,11 +141,10 @@ const AdminPanel = () => {
     if (!validateForm()) return;
     
     try {
-      const backendPort = localStorage.getItem('backendPort') || '5001';
       if (editingId) {
-        await axios.put(`http://localhost:${backendPort}/api/meditations/${editingId}`, formData);
+        await axios.put(`/api/meditations/${editingId}`, formData);
       } else {
-        await axios.post(`http://localhost:${backendPort}/api/meditations`, formData);
+        await axios.post(`/api/meditations`, formData);
       }
       
       // Update local state
@@ -198,8 +194,7 @@ const AdminPanel = () => {
     if (!window.confirm('Are you sure you want to delete this meditation?')) return;
     
     try {
-      const backendPort = localStorage.getItem('backendPort') || '5001';
-      await axios.delete(`http://localhost:${backendPort}/api/meditations/${id}`);
+      await axios.delete(`/api/meditations/${id}`);
       setMeditations(prev => prev.filter(m => m._id !== id));
     } catch (err) {
       console.error('Error deleting meditation:', err);
@@ -433,21 +428,182 @@ const AdminPanel = () => {
         {activeTab === 'content' && (
           <div>
             <h2 className="text-2xl font-bold mb-6">Content Management</h2>
-            <p className="text-gray-600">Manage application content from here.</p>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium mb-2">Meditation Content</h3>
-                <p className="text-gray-600 mb-4">Manage guided meditations</p>
-                <button className="bg-primary-600 text-white px-4 py-2 rounded-md">
-                  Manage Meditations
-                </button>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium mb-2">Resource Library</h3>
-                <p className="text-gray-600 mb-4">Manage wellbeing resources</p>
-                <button className="bg-primary-600 text-white px-4 py-2 rounded-md">
-                  Manage Resources
-                </button>
+            <div className="bg-white shadow rounded-lg p-6 mb-8">
+              <h3 className="text-xl font-semibold mb-4">Add/Edit Meditation</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Meditation title"
+                    />
+                    {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                    <input
+                      type="number"
+                      name="duration"
+                      value={formData.duration}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      min="1"
+                      max="180"
+                    />
+                    {formErrors.duration && <p className="text-red-500 text-xs mt-1">{formErrors.duration}</p>}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    rows="3"
+                    placeholder="Describe this meditation"
+                  ></textarea>
+                  {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Audio URL</label>
+                  <input
+                    type="text"
+                    name="audioUrl"
+                    value={formData.audioUrl}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="https://example.com/audio.mp3"
+                  />
+                  {formErrors.audioUrl && <p className="text-red-500 text-xs mt-1">{formErrors.audioUrl}</p>}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="guided">Guided</option>
+                      <option value="breathing">Breathing</option>
+                      <option value="sleep">Sleep</option>
+                      <option value="focus">Focus</option>
+                      <option value="mindfulness">Mindfulness</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="guided">Guided</option>
+                      <option value="in-app">In-App</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center pt-7">
+                    <input
+                      type="checkbox"
+                      name="isPremium"
+                      checked={formData.isPremium}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <label className="ml-2 block text-sm text-gray-700">Premium Content</label>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                  >
+                    {editingId ? 'Update' : 'Add'} Meditation
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <h3 className="text-xl font-semibold p-6 border-b border-gray-200">Meditation Library</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Premium</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {meditations.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                          No meditations found. Add your first one above.
+                        </td>
+                      </tr>
+                    ) : (
+                      meditations.map((meditation) => (
+                        <tr key={meditation._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{meditation.title}</div>
+                            <div className="text-xs text-gray-500 truncate max-w-xs">{meditation.description}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {meditation.duration} min
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {meditation.category || 'guided'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {meditation.type || 'guided'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              meditation.isPremium ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {meditation.isPremium ? 'Yes' : 'No'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleEdit(meditation)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-3"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(meditation._id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

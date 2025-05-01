@@ -99,6 +99,9 @@ const MoodSchema = new mongoose.Schema({
 // Create Mood model
 const Mood = mongoose.model('Mood', MoodSchema);
 
+// Import Meditation model
+const Meditation = require('./models/Meditation');
+
 // Middleware to authenticate requests
 const auth = async (req, res, next) => {
   try {
@@ -286,30 +289,92 @@ async function startServer() {
     // Get all meditations
     app.get('/api/meditations', async (req, res) => {
       try {
-        // Mock meditation data since we don't have a proper model
-        const meditations = [
-          {
-            _id: '1',
-            title: 'Breathing Meditation',
-            description: 'Focus on your breath to calm your mind and body.',
-            duration: 5
-          },
-          {
-            _id: '2',
-            title: 'Body Scan',
-            description: 'Gradually focus your attention on different parts of your body.',
-            duration: 10
-          },
-          {
-            _id: '3',
-            title: 'Loving-Kindness Meditation',
-            description: 'Develop feelings of goodwill, kindness, and warmth towards others.',
-            duration: 15
-          }
-        ];
+        const meditations = await Meditation.find().sort({ createdAt: -1 });
         res.json(meditations);
       } catch (err) {
         console.error('Error fetching meditations:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+    
+    // Get single meditation
+    app.get('/api/meditations/:id', async (req, res) => {
+      try {
+        const meditation = await Meditation.findById(req.params.id);
+        if (!meditation) {
+          return res.status(404).json({ message: 'Meditation not found' });
+        }
+        res.json(meditation);
+      } catch (err) {
+        console.error('Error fetching meditation:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+    
+    // Create meditation (admin only)
+    app.post('/api/meditations', auth, adminAuth, async (req, res) => {
+      try {
+        const { title, description, duration, audioUrl, category, type, isPremium } = req.body;
+        
+        // Create new meditation
+        const meditation = new Meditation({
+          title,
+          description,
+          duration,
+          audioUrl,
+          category,
+          type,
+          isPremium
+        });
+        
+        const savedMeditation = await meditation.save();
+        res.status(201).json(savedMeditation);
+      } catch (err) {
+        console.error('Error creating meditation:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+    
+    // Update meditation (admin only)
+    app.put('/api/meditations/:id', auth, adminAuth, async (req, res) => {
+      try {
+        const { title, description, duration, audioUrl, category, type, isPremium } = req.body;
+        
+        // Find meditation
+        let meditation = await Meditation.findById(req.params.id);
+        if (!meditation) {
+          return res.status(404).json({ message: 'Meditation not found' });
+        }
+        
+        // Update fields
+        meditation.title = title || meditation.title;
+        meditation.description = description || meditation.description;
+        meditation.duration = duration || meditation.duration;
+        meditation.audioUrl = audioUrl || meditation.audioUrl;
+        meditation.category = category || meditation.category;
+        meditation.type = type || meditation.type;
+        meditation.isPremium = isPremium !== undefined ? isPremium : meditation.isPremium;
+        
+        const updatedMeditation = await meditation.save();
+        res.json(updatedMeditation);
+      } catch (err) {
+        console.error('Error updating meditation:', err);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+    
+    // Delete meditation (admin only)
+    app.delete('/api/meditations/:id', auth, adminAuth, async (req, res) => {
+      try {
+        const meditation = await Meditation.findById(req.params.id);
+        if (!meditation) {
+          return res.status(404).json({ message: 'Meditation not found' });
+        }
+        
+        await meditation.deleteOne();
+        res.json({ message: 'Meditation removed' });
+      } catch (err) {
+        console.error('Error deleting meditation:', err);
         res.status(500).json({ message: 'Server error' });
       }
     });
