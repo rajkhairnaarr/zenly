@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import ZenGarden from '../components/ZenGarden';
 import {
   BookOpenIcon,
   HeartIcon,
@@ -85,15 +84,6 @@ const Dashboard = () => {
       iconColor: 'text-blue-600',
       image: '📝',
     },
-    {
-      name: 'Mood Check',
-      description: 'How are you feeling right now?',
-      icon: BoltIcon,
-      link: '/onboarding',
-      color: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      image: '🌈',
-    },
   ];
 
   return (
@@ -106,12 +96,6 @@ const Dashboard = () => {
           Your personal space for mindfulness and mental well-being.
         </p>
       </div>
-
-      {/* Zen Garden Visualization */}
-      <section>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Meditation Garden</h2>
-        <ZenGarden streak={stats.streak} isDarkMode={false} />
-      </section>
 
       {/* Hero Section with Illustration */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary-600 to-primary-800 text-white shadow-xl">
@@ -145,6 +129,25 @@ const Dashboard = () => {
               <div className="mt-4 text-xl font-medium">Mind & Wellness</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Mood Check Section */}
+      <div className="bg-gradient-radial from-amber-100 via-pink-100 to-blue-100 rounded-3xl p-8 shadow-md">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">How are you feeling today?</h2>
+          <p className="text-gray-600 mt-2">Taking a moment to check in with yourself can improve your well-being</p>
+        </div>
+        
+        <div className="flex justify-center">
+          <Link
+            to="/onboarding"
+            className="bg-white hover:bg-blue-50 text-blue-600 font-semibold px-8 py-3 rounded-full shadow-lg transform transition-all hover:scale-105 flex items-center space-x-2"
+          >
+            <BoltIcon className="h-5 w-5" />
+            <span>Check Your Mood</span>
+            <span className="text-xl ml-2">🌈</span>
+          </Link>
         </div>
       </div>
 
