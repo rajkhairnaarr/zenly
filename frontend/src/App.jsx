@@ -21,7 +21,8 @@ import {
   SadExperience,
   LonelyExperience,
   BoredExperience,
-  ChillExperience
+  ChillExperience,
+  GlobalStyles
 } from './components/MoodExperiences';
 
 // Inner component to access AuthContext
@@ -111,6 +112,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
+      <GlobalStyles />
       <AppContent />
     </AuthProvider>
   );

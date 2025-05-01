@@ -320,7 +320,7 @@ export const DepressedExperience = () => {
 };
 
 // Add the keyframe animation for breathing
-const GlobalStyles = () => (
+export const GlobalStyles = () => (
   <style jsx global>{`
     @keyframes breathe {
       0%, 100% { transform: scale(0.8); opacity: 0.7; } /* Exhale end / Start */
@@ -340,16 +340,37 @@ const GlobalStyles = () => (
     .animate-pulse-slow {
        animation: pulse-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+    
+    /* Add fade-in animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    /* Floating animations for background elements */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+    .animate-float-slow {
+      animation: float 8s ease-in-out infinite;
+    }
+    .animate-float-slower {
+      animation: float 10s ease-in-out infinite;
+    }
+    .animate-float-slow-reverse {
+      animation: float 9s ease-in-out infinite reverse;
+    }
   `}</style>
 );
 
-// You might need to wrap your App or relevant part with these styles
-// For example, in App.jsx:
-// import { GlobalStyles } from './components/MoodExperiences';
-// function App() { return (<> <GlobalStyles /> {/* rest of app */} </>); } 
-
 // Re-export all components - REMOVED this block as components are already exported individually
-/*
 export {
   MoodExperienceLayout,
   EnergeticExperience,
@@ -360,6 +381,5 @@ export {
   BoredExperience,
   ChillExperience,
   DepressedExperience,
-  GlobalStyles // Export the styles
-};
-*/ 
+  GlobalStyles
+}; 
