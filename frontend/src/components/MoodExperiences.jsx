@@ -370,16 +370,5 @@ export const GlobalStyles = () => (
   `}</style>
 );
 
-// Re-export all components - REMOVED this block as components are already exported individually
-export {
-  MoodExperienceLayout,
-  EnergeticExperience,
-  AnxiousExperience,
-  LethargicExperience,
-  SadExperience,
-  LonelyExperience,
-  BoredExperience,
-  ChillExperience,
-  DepressedExperience,
-  GlobalStyles
-}; 
+// Export the MoodExperienceLayout for reuse if needed
+export { MoodExperienceLayout }; 
