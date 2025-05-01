@@ -153,15 +153,37 @@ app.get('/api/admin/users', auth, adminAuth, async (req, res) => {
     console.log('GET /api/admin/users - Request received');
     
     // Clear any query cache to ensure fresh data
-    mongoose.connection.db.collection('users').find().toArray = mongoose.connection.db.collection('users').find().toArray.purgeQueryCache;
+    try {
+      mongoose.connection.db.collection('users').find().toArray = mongoose.connection.db.collection('users').find().toArray.purgeQueryCache;
+    } catch (cacheError) {
+      console.log('Cache clearing not supported or failed:', cacheError.message);
+    }
     
-    // Find all users, excluding password field, and sort by newest first
+    try {
+      // Try to get users directly from the users collection
+      console.log('Attempting to get users directly from collection...');
+      const users = await mongoose.connection.db.collection('users').find({}).sort({ createdAt: -1 }).toArray();
+      console.log(`Found ${users.length} users in the collection`);
+      
+      // Add cache control header to prevent browser caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      res.json(users);
+      return;
+    } catch (directError) {
+      console.error('Error fetching users directly from collection:', directError);
+      // Fall back to using the model if direct access fails
+    }
+    
+    // Find all users using mongoose model as fallback
     const users = await User.find()
       .select('-password')
       .sort({ createdAt: -1 })
       .lean(); // Using lean() for better performance
     
-    console.log(`GET /api/admin/users - Found ${users.length} users`);
+    console.log(`GET /api/admin/users - Found ${users.length} users using mongoose model`);
     
     // Add cache control header to prevent browser caching
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -210,8 +232,8 @@ async function connectToMongoDB() {
   try {
     // Try MongoDB Atlas connection first
     console.log('Connecting to MongoDB Atlas...');
-    // MongoDB Atlas connection string
-    const mongoUri = 'mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/?retryWrites=true&w=majority&appName=zenly';
+    // MongoDB Atlas connection string - ensuring the database name is specified
+    const mongoUri = 'mongodb+srv://rajkhairnar6969:raj%40khairnar@zenly.0o2cxgm.mongodb.net/test?retryWrites=true&w=majority&appName=zenly';
     
     console.log('Attempting to connect to MongoDB Atlas...');
     await mongoose.connect(mongoUri, {
@@ -219,8 +241,9 @@ async function connectToMongoDB() {
       useUnifiedTopology: true,
     });
     console.log('Connected to MongoDB Atlas successfully!');
+    console.log(`Connected to database: ${mongoose.connection.db.databaseName}`);
 
-    // Create a default admin user
+    // Create a default admin user if none exists
     const adminExists = await User.findOne({ email: 'admin@zenly.com' });
     if (!adminExists) {
       const salt = await bcrypt.genSalt(10);

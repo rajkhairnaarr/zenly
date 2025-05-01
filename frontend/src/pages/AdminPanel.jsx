@@ -168,13 +168,15 @@ const AdminPanel = () => {
   const toggleUserRole = async (userId, currentRole) => {
     try {
       // First update UI immediately for better UX
-      setUsers(prev => prev.map(user => 
-        user._id === userId 
-          ? {...user, role: currentRole === 'admin' ? 'user' : 'admin'} 
-          : user
-      ));
+      setUsers(prev => prev.map(user => {
+        const id = getUserId(user);
+        return id === userId
+          ? {...user, role: currentRole === 'admin' ? 'user' : 'admin'}
+          : user;
+      }));
       
       // Then try API call
+      console.log(`Toggling role for user ${userId}`);
       await axios.put(`/api/admin/users/${userId}/role`, {
         role: currentRole === 'admin' ? 'user' : 'admin'
       });
@@ -339,6 +341,36 @@ const AdminPanel = () => {
   const refreshData = () => {
     setLoading(true);
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Helper function to get user ID reliably from MongoDB or local data
+  const getUserId = (user) => {
+    // MongoDB ObjectId comes as _id
+    if (user._id) {
+      // It might be an object or a string depending on where it's from
+      return typeof user._id === 'object' ? user._id.toString() : user._id;
+    }
+    // Our local data uses id
+    return user.id || 'unknown-id';
+  };
+
+  // Helper function to format user data for display
+  const formatUserData = (user) => {
+    // Format dates properly or provide default
+    const formatDate = (date) => {
+      if (!date) return 'Unknown';
+      try {
+        return new Date(date).toLocaleString();
+      } catch (e) {
+        return 'Invalid Date';
+      }
+    };
+
+    return {
+      ...user,
+      id: getUserId(user),
+      createdAt: formatDate(user.createdAt)
+    };
   };
 
   if (loading) {
@@ -542,31 +574,34 @@ const AdminPanel = () => {
                       </td>
                     </tr>
                   ) : (
-                    users.map((user) => (
-                      <tr key={user._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => toggleUserRole(user._id, user.role)}
-                            className="text-primary-600 hover:text-primary-900"
-                          >
-                            {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    users.map((user) => {
+                      const formattedUser = formatUserData(user);
+                      return (
+                        <tr key={formattedUser.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{formattedUser.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{formattedUser.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              formattedUser.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {formattedUser.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => toggleUserRole(formattedUser.id, formattedUser.role)}
+                              className="text-primary-600 hover:text-primary-900"
+                            >
+                              {formattedUser.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
