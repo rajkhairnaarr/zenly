@@ -32,13 +32,19 @@ const UserQueries = {
   /**
    * Find user by email
    * @param {string} email - User email
+   * @param {boolean} [includePassword=false] - Whether to include the password field
    * @returns {Object} User object if found
    */
-  async findUserByEmail(email) {
+  async findUserByEmail(email, includePassword = false) {
     await connectToMongoDB();
     const User = getUserModel();
-    
-    const user = await User.findOne({ email });
+
+    let query = User.findOne({ email });
+    if (includePassword) {
+      query = query.select('+password');
+    }
+
+    const user = await query;
     return user;
   },
   

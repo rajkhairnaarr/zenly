@@ -23,16 +23,16 @@ module.exports = async (req, res) => {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
     
-    // Find user by email
-    const user = await UserQueries.findUserByEmail(email);
+    // Find user by email, including the password field
+    const user = await UserQueries.findUserByEmail(email, true);
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     // Create JWT token
