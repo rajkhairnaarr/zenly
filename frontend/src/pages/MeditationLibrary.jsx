@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import BreathingVisualizer from '../components/BreathingVisualizer';
 import BreathingSettings from '../components/BreathingSettings';
+import MeditationAudio from '../components/MeditationAudio';
 
 const MeditationLibrary = () => {
   const [meditations, setMeditations] = useState([]);
@@ -15,6 +16,15 @@ const MeditationLibrary = () => {
     inhaleDuration: 4,
     exhaleDuration: 6
   });
+  const [audioSettings, setAudioSettings] = useState({
+    playStartSound: true,
+    playBackgroundSound: true,
+    soundType: 'bells',
+    backgroundSoundType: 'nature',
+    volume: 0.5
+  });
+  const [isStartSoundPlaying, setIsStartSoundPlaying] = useState(false);
+  const [isBackgroundSoundPlaying, setIsBackgroundSoundPlaying] = useState(false);
 
   const guidedMeditations = [
     {
@@ -190,6 +200,7 @@ const MeditationLibrary = () => {
       setTimeout(() => {
         alert('Meditation session complete. How do you feel?');
         setActiveSession(null);
+        setIsBackgroundSoundPlaying(false);
       }, 1000);
     }
     
@@ -273,12 +284,40 @@ const MeditationLibrary = () => {
       setActiveSession(meditation);
       setTimeRemaining(meditation.duration * 60);
       setSessionStep(0);
+      
+      // Play start sound (bell)
+      if (audioSettings.playStartSound) {
+        setIsStartSoundPlaying(true);
+        // Start background sound after the bell finishes
+        setTimeout(() => {
+          setIsStartSoundPlaying(false);
+          if (audioSettings.playBackgroundSound) {
+            setIsBackgroundSoundPlaying(true);
+          }
+        }, 4000); // Typical bell sound duration
+      } else if (audioSettings.playBackgroundSound) {
+        // If no start sound, begin background sound immediately
+        setIsBackgroundSoundPlaying(true);
+      }
     } catch (err) {
       console.error('Error starting meditation:', err);
       // Provide fallback behavior when backend is not available
       setActiveSession(meditation);
       setTimeRemaining(meditation.duration * 60);
       setSessionStep(0);
+      
+      // Play sounds even in fallback mode
+      if (audioSettings.playStartSound) {
+        setIsStartSoundPlaying(true);
+        setTimeout(() => {
+          setIsStartSoundPlaying(false);
+          if (audioSettings.playBackgroundSound) {
+            setIsBackgroundSoundPlaying(true);
+          }
+        }, 4000);
+      } else if (audioSettings.playBackgroundSound) {
+        setIsBackgroundSoundPlaying(true);
+      }
     }
   };
 
@@ -299,7 +338,42 @@ const MeditationLibrary = () => {
   const endSession = () => {
     if (confirm('Are you sure you want to end this meditation session?')) {
       setActiveSession(null);
+      setIsStartSoundPlaying(false);
+      setIsBackgroundSoundPlaying(false);
     }
+  };
+
+  const toggleSound = (type) => {
+    if (type === 'background') {
+      setAudioSettings(prev => ({
+        ...prev,
+        playBackgroundSound: !prev.playBackgroundSound
+      }));
+      
+      // If we're in an active session, update sound state
+      if (activeSession && !isStartSoundPlaying) {
+        setIsBackgroundSoundPlaying(prev => !prev);
+      }
+    } else if (type === 'start') {
+      setAudioSettings(prev => ({
+        ...prev,
+        playStartSound: !prev.playStartSound
+      }));
+    }
+  };
+
+  const changeBackgroundSound = (soundType) => {
+    setAudioSettings(prev => ({
+      ...prev,
+      backgroundSoundType: soundType
+    }));
+  };
+
+  const handleVolumeChange = (newVolume) => {
+    setAudioSettings(prev => ({
+      ...prev,
+      volume: newVolume
+    }));
   };
 
   if (loading) {
@@ -337,6 +411,26 @@ const MeditationLibrary = () => {
               ></div>
             </div>
             
+            {/* Start sound - plays once at beginning */}
+            <MeditationAudio 
+              isPlaying={isStartSoundPlaying}
+              soundType={audioSettings.soundType}
+              volume={audioSettings.volume}
+              onSoundComplete={() => {
+                setIsStartSoundPlaying(false);
+                if (audioSettings.playBackgroundSound) {
+                  setIsBackgroundSoundPlaying(true);
+                }
+              }}
+            />
+            
+            {/* Background sound - loops continuously */}
+            <MeditationAudio 
+              isPlaying={isBackgroundSoundPlaying}
+              soundType={audioSettings.backgroundSoundType}
+              volume={audioSettings.volume * 0.7} // Slightly lower volume for background
+            />
+            
             {activeSession.type === 'in-app' && (
               <div className="mb-8">
                 <BreathingVisualizer 
@@ -347,6 +441,71 @@ const MeditationLibrary = () => {
                 
                 {showSettings ? (
                   <div className="mt-8">
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-3">Sound Settings</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-700">Start Sound</span>
+                          <label className="inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={audioSettings.playStartSound}
+                              onChange={() => toggleSound('start')}
+                            />
+                            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-700">Background Sound</span>
+                          <label className="inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={audioSettings.playBackgroundSound}
+                              onChange={() => toggleSound('background')}
+                            />
+                            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                          </label>
+                        </div>
+                        
+                        {audioSettings.playBackgroundSound && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Background Sound Type
+                            </label>
+                            <select
+                              value={audioSettings.backgroundSoundType}
+                              onChange={(e) => changeBackgroundSound(e.target.value)}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            >
+                              <option value="nature">Nature Sounds</option>
+                              <option value="ocean">Ocean Waves</option>
+                              <option value="rainforest">Rainforest</option>
+                              <option value="bowls">Singing Bowls</option>
+                              <option value="chimes">Wind Chimes</option>
+                            </select>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Volume: {Math.round(audioSettings.volume * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={audioSettings.volume}
+                            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
                     <BreathingSettings 
                       defaultInhale={breathingSettings.inhaleDuration}
                       defaultExhale={breathingSettings.exhaleDuration}
@@ -357,12 +516,20 @@ const MeditationLibrary = () => {
                     />
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="mt-4 text-sm text-primary-600 hover:text-primary-800 underline"
-                  >
-                    Adjust Breathing Pattern
-                  </button>
+                  <div className="mt-4 space-x-4">
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      className="text-sm text-primary-600 hover:text-primary-800 underline"
+                    >
+                      Adjust Settings
+                    </button>
+                    <button
+                      onClick={() => toggleSound('background')}
+                      className="text-sm text-primary-600 hover:text-primary-800"
+                    >
+                      {isBackgroundSoundPlaying ? "Mute Sound" : "Unmute Sound"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
