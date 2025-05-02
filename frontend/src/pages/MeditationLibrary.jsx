@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
 import BreathingVisualizer from '../components/BreathingVisualizer';
 import BreathingSettings from '../components/BreathingSettings';
 import MeditationAudio from '../components/MeditationAudio';
+import { CalendarIcon } from '@heroicons/react/24/outline';
 
 const MeditationLibrary = () => {
   const [meditations, setMeditations] = useState([]);
@@ -25,6 +26,9 @@ const MeditationLibrary = () => {
   });
   const [isStartSoundPlaying, setIsStartSoundPlaying] = useState(false);
   const [isBackgroundSoundPlaying, setIsBackgroundSoundPlaying] = useState(false);
+  const [isSoundLoading, setIsSoundLoading] = useState(false);
+  const [soundError, setSoundError] = useState(null);
+  const [dailySuggestion, setDailySuggestion] = useState(null);
 
   const guidedMeditations = [
     {
@@ -180,9 +184,28 @@ const MeditationLibrary = () => {
     ]
   };
 
-  useEffect(() => {
-    fetchMeditations();
+  // Generate a daily suggestion based on day of week
+  const getDailySuggestion = useCallback(() => {
+    const day = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const suggestions = [
+      { title: "Sunday Reflection", description: "Start your week with a calm mind", duration: 10, type: "mindfulness" },
+      { title: "Monday Energy", description: "Energize your mind for the week ahead", duration: 5, type: "focus" },
+      { title: "Tuesday Clarity", description: "Find clarity in your thoughts", duration: 7, type: "focus" },
+      { title: "Wednesday Balance", description: "Mid-week balancing meditation", duration: 10, type: "balance" },
+      { title: "Thursday Creativity", description: "Open your mind to creative thoughts", duration: 8, type: "creativity" },
+      { title: "Friday Relaxation", description: "Wind down from the workweek", duration: 12, type: "relaxation" },
+      { title: "Saturday Joy", description: "Cultivate joy and positivity", duration: 10, type: "gratitude" }
+    ];
+    
+    return suggestions[day];
   }, []);
+
+  useEffect(() => {
+    // Set a daily suggestion
+    setDailySuggestion(getDailySuggestion());
+    
+    fetchMeditations();
+  }, [getDailySuggestion]);
 
   useEffect(() => {
     let timer;
@@ -376,6 +399,17 @@ const MeditationLibrary = () => {
     }));
   };
 
+  // Handle sound loading state changes
+  const handleSoundLoadingChange = (isLoading) => {
+    setIsSoundLoading(isLoading);
+  };
+
+  // Handle sound errors
+  const handleSoundError = (error) => {
+    setSoundError(error);
+    console.error("Sound error:", error);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -422,6 +456,8 @@ const MeditationLibrary = () => {
                   setIsBackgroundSoundPlaying(true);
                 }
               }}
+              onLoadingChange={handleSoundLoadingChange}
+              onError={handleSoundError}
             />
             
             {/* Background sound - loops continuously */}
@@ -429,10 +465,37 @@ const MeditationLibrary = () => {
               isPlaying={isBackgroundSoundPlaying}
               soundType={audioSettings.backgroundSoundType}
               volume={audioSettings.volume * 0.85}
+              onLoadingChange={handleSoundLoadingChange}
+              onError={handleSoundError}
             />
             
+            {/* Sound Loading Indicator */}
+            {isSoundLoading && (
+              <div className="mb-4 flex items-center justify-center">
+                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Loading audio...</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Sound Error Indicator */}
+            {soundError && (
+              <div className="mb-4 flex items-center justify-center">
+                <div className="bg-red-100 text-red-800 px-4 py-2 rounded-full flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>Sound could not be loaded. Using fallback.</span>
+                </div>
+              </div>
+            )}
+            
             {/* Sound Indicator - visual feedback that sound is playing */}
-            {(isStartSoundPlaying || isBackgroundSoundPlaying) && (
+            {(isStartSoundPlaying || isBackgroundSoundPlaying) && !isSoundLoading && !soundError && (
               <div className="mb-4 flex items-center justify-center">
                 <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -615,6 +678,44 @@ const MeditationLibrary = () => {
         </p>
       </div>
       
+      {/* Daily Suggestion - Add this before the meditation list */}
+      {!activeSession && dailySuggestion && (
+        <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 shadow-sm border border-indigo-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                <CalendarIcon className="h-5 w-5 text-indigo-500 mr-2" />
+                Today's Meditation Suggestion
+              </h3>
+              <p className="mt-2 text-gray-700 font-medium">{dailySuggestion.title}</p>
+              <p className="mt-1 text-gray-600">{dailySuggestion.description}</p>
+              <p className="mt-1 text-sm text-gray-500">{dailySuggestion.duration} minutes • {dailySuggestion.type}</p>
+              <div className="mt-4">
+                <button
+                  onClick={() => startMeditation({
+                    title: dailySuggestion.title,
+                    description: dailySuggestion.description,
+                    duration: dailySuggestion.duration,
+                    type: 'in-app'
+                  })}
+                  className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  Start Daily Meditation
+                </button>
+              </div>
+            </div>
+            <div className="hidden sm:block text-6xl">
+              {dailySuggestion.type === 'focus' && '🧠'}
+              {dailySuggestion.type === 'mindfulness' && '🌿'}
+              {dailySuggestion.type === 'relaxation' && '🌊'}
+              {dailySuggestion.type === 'balance' && '☯️'}
+              {dailySuggestion.type === 'creativity' && '✨'}
+              {dailySuggestion.type === 'gratitude' && '🙏'}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div>
         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Featured Guided Meditations</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -716,4 +817,4 @@ const MeditationLibrary = () => {
   );
 };
 
-export default MeditationLibrary; 
+export default memo(MeditationLibrary); 

@@ -1,152 +1,246 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Import sample bell sound as base64 - small file (~10KB)
-// This is a base64-encoded short bell sound
+// Sound sources with softer, more meditation-friendly tones
+const SOUND_SOURCES = {
+  // Soft bell sounds
+  bells: 'https://freesound.org/data/previews/339/339809_5121236-lq.mp3', // Soft Tibetan bell
+  
+  // Ambient nature sounds
+  nature: 'https://freesound.org/data/previews/521/521275_7724898-lq.mp3', // Gentle forest sounds
+  ocean: 'https://freesound.org/data/previews/466/466183_88676-lq.mp3', // Gentle ocean waves
+  rainforest: 'https://freesound.org/data/previews/96/96742_1573602-lq.mp3', // Soft rain in forest
+  bowls: 'https://freesound.org/data/previews/422/422096_2393266-lq.mp3', // Gentle singing bowl
+  chimes: 'https://freesound.org/data/previews/257/257807_4202572-lq.mp3'  // Soft wind chimes
+};
+
+// Use AudioContext to create smoother sounds
+const createAudioTone = (frequency, duration, volume) => {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    // Use sine wave for soft tone
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    
+    // Add volume fading for smoother start/end
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.1);
+    
+    // Connect nodes
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Start and schedule stop with fade out
+    oscillator.start();
+    gainNode.gain.setValueAtTime(volume, audioContext.currentTime + duration - 0.2);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+    oscillator.stop(audioContext.currentTime + duration);
+    
+    return { oscillator, gainNode, audioContext };
+  } catch (e) {
+    console.error('Could not create audio tone:', e);
+    return null;
+  }
+};
 
 const MeditationAudio = ({ 
   isPlaying, 
   soundType = 'bells', 
-  volume = 1.0,  // Maximum volume (100%)
-  onSoundComplete = () => {}
+  volume = 1.0,
+  onSoundComplete = () => {},
+  onLoadingChange = null, // Optional callback for loading state changes
+  onError = null // Optional callback for error handling
 }) => {
-  const [audio, setAudio] = useState(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Create a better audio experience with distinct sounds
+  const audioRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const [loadError, setLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Announce to screen readers when sound changes
   useEffect(() => {
-    // Clean up any previous audio
-    if (audio) {
-      audio.pause();
-      audio.src = '';
+    if (isPlaying) {
+      const announcement = document.createElement('div');
+      announcement.setAttribute('aria-live', 'polite');
+      announcement.setAttribute('className', 'sr-only');
+      announcement.textContent = `${soundType === 'bells' ? 'Bell sound' : 'Ambient sound'} is now playing`;
+      document.body.appendChild(announcement);
+      
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 1000);
     }
-
-    // Create a new audio element
-    const newAudio = new Audio();
-    newAudio.volume = volume;
-    newAudio.loop = soundType !== 'bells';
+  }, [isPlaying, soundType]);
+  
+  // Memoized cleanup function to prevent recreating on every render
+  const cleanupAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      if (audioRef.current.src) {
+        audioRef.current.src = '';
+        audioRef.current.load();
+      }
+    }
     
-    // Use distinct sounds for different meditation types
-    if (soundType === 'bells') {
-      newAudio.src = "https://soundbible.com/grab.php?id=1496&type=mp3"; // Tibetan Bell
-    } else if (soundType === 'nature') {
-      newAudio.src = "https://soundbible.com/grab.php?id=2196&type=mp3"; // Forest Ambience
-    } else if (soundType === 'ocean') {
-      newAudio.src = "https://soundbible.com/grab.php?id=2120&type=mp3"; // Ocean Waves
-    } else if (soundType === 'rainforest') {
-      newAudio.src = "https://soundbible.com/grab.php?id=2197&type=mp3"; // Rainforest Ambience
-    } else if (soundType === 'bowls') {
-      newAudio.src = "https://soundbible.com/grab.php?id=2218&type=mp3"; // Singing Bowl
-    } else if (soundType === 'chimes') {
-      newAudio.src = "https://soundbible.com/grab.php?id=2219&type=mp3"; // Wind Chimes
-    } else {
-      // Fallback to a basic tone
-      newAudio.src = "https://soundbible.com/grab.php?id=1496&type=mp3";
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
     }
+  }, []);
 
-    // Handle audio load event
-    newAudio.oncanplaythrough = () => {
-      console.log(`Audio loaded: ${soundType} at volume ${volume}`);
-      setIsLoaded(true);
-    };
-
-    // Handle end of audio
-    newAudio.onended = () => {
-      console.log(`Audio ended: ${soundType}`);
-      if (soundType === 'bells') {
-        onSoundComplete();
-      }
-    };
-
-    // Handle errors
-    newAudio.onerror = (e) => {
-      console.error(`Audio error for ${soundType}:`, e);
+  // Handle audio playback with fallbacks
+  const playAudio = useCallback(() => {
+    if (!isPlaying) return;
+    
+    try {
+      // Clean up previous audio
+      cleanupAudio();
       
-      // Fallback to browser-generated sound on error
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
+      // Set loading state
+      setIsLoading(true);
+      if (onLoadingChange) onLoadingChange(true);
       
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
+      // Try HTML5 Audio first - softer and more reliable
+      const newAudio = new Audio();
+      newAudio.volume = Math.min(volume, 1.0);
+      newAudio.preload = 'auto';
       
-      // Configure the sound based on type
-      if (soundType === 'bells') {
-        oscillator.type = 'sine';
-        oscillator.frequency.value = 880; // High bell sound
-        gainNode.gain.value = volume;
-        
-        oscillator.start();
-        setTimeout(() => {
-          oscillator.stop();
+      // Get source based on sound type
+      const source = SOUND_SOURCES[soundType] || SOUND_SOURCES.bells;
+      newAudio.src = source;
+      
+      // Configure audio properties
+      newAudio.loop = soundType !== 'bells';
+      
+      // Add event handlers
+      newAudio.oncanplaythrough = () => {
+        setIsLoading(false);
+        if (onLoadingChange) onLoadingChange(false);
+      };
+      
+      newAudio.onended = () => {
+        if (soundType === 'bells') {
           onSoundComplete();
-        }, 1000);
-      } else {
-        oscillator.type = 'sine';
-        oscillator.frequency.value = 440; // Lower ambient sound
-        gainNode.gain.value = volume * 0.8; // Slightly lower volume for background
+        }
+      };
+      
+      newAudio.onerror = (e) => {
+        console.log('Error loading sound, falling back to generated tone', e);
+        setLoadError(true);
+        setIsLoading(false);
+        if (onLoadingChange) onLoadingChange(false);
+        if (onError) onError(e);
         
-        oscillator.start();
-        // Don't stop for looping sounds
-      }
-    };
-
-    setAudio(newAudio);
-
-    // Clean up
-    return () => {
-      if (newAudio) {
-        newAudio.pause();
-        newAudio.src = '';
-      }
-    };
-  }, [soundType, volume, onSoundComplete]);
-
-  // Handle play/pause
-  useEffect(() => {
-    if (!audio) return;
-
-    if (isPlaying && isLoaded) {
-      // Attempt to play with full volume
-      audio.volume = volume;
+        // Fallback to generated tone
+        let tone = null;
+        if (soundType === 'bells') {
+          // Soft bell-like tone (A4)
+          tone = createAudioTone(440, 3, volume * 0.7);
+          setTimeout(onSoundComplete, 3000);
+        } else {
+          // Soft ambient tone (G3, lower frequency for gentler ambient sound)
+          tone = createAudioTone(196, Infinity, volume * 0.5);
+        }
+        
+        if (tone) {
+          audioContextRef.current = tone.audioContext;
+        }
+      };
       
-      // Create user interaction by clicking the document to help with autoplay
-      document.body.click();
-      
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          console.log(`Successfully playing ${soundType} at volume ${volume}`);
-        }).catch(error => {
-          console.error('Audio play failed:', error);
+      // Attempt to play with retry logic
+      const playPromise = newAudio.play();
+      if (playPromise) {
+        playPromise.catch(error => {
+          console.warn('Audio autoplay was prevented, will retry on user interaction', error);
+          setLoadError(true);
+          setIsLoading(false);
+          if (onLoadingChange) onLoadingChange(false);
+          if (onError) onError(error);
           
-          // On failure, try once more with a user interaction
-          document.addEventListener('click', function playOnClick() {
-            audio.play().catch(e => console.error('Retry failed:', e));
-            document.removeEventListener('click', playOnClick);
-          }, { once: true });
-          
-          // Alert the user they need to interact
-          console.log('User interaction required for audio. Please click anywhere on the page.');
+          // Alternative is to wait for user interaction or use generated tone
+          const tone = soundType === 'bells' 
+            ? createAudioTone(440, 3, volume * 0.7)
+            : createAudioTone(196, Infinity, volume * 0.5);
+            
+          if (tone) {
+            audioContextRef.current = tone.audioContext;
+            if (soundType === 'bells') {
+              setTimeout(onSoundComplete, 3000);
+            }
+          }
         });
       }
-    } else if (audio) {
-      audio.pause();
+      
+      audioRef.current = newAudio;
+    } catch (e) {
+      console.error('Audio playback failed completely:', e);
+      setIsLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
+      if (onError) onError(e);
     }
-  }, [isPlaying, audio, isLoaded, soundType, volume]);
+  }, [isPlaying, soundType, volume, onSoundComplete, cleanupAudio, onLoadingChange, onError]);
+  
+  // Handle volume changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = Math.min(volume, 1.0);
+    }
+  }, [volume]);
+  
+  // Handle play/pause based on isPlaying state
+  useEffect(() => {
+    if (isPlaying) {
+      playAudio();
+    } else {
+      cleanupAudio();
+      setIsLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
+    }
+    
+    return () => {
+      cleanupAudio();
+      setIsLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
+    };
+  }, [isPlaying, playAudio, cleanupAudio, onLoadingChange]);
 
-  return (
-    <div onClick={() => { 
-      if (audio && isPlaying && !audio.paused) {
-        console.log("Audio is playing!");
-      } else if (audio && isPlaying) {
-        audio.play().catch(e => console.log("Click didn't help:", e));
+  // Support keyboard controls
+  useEffect(() => {
+    if (!isPlaying) return;
+    
+    const handleKeyDown = (e) => {
+      // Space key toggles play/pause when focused
+      if (e.key === ' ' || e.key === 'Space') {
+        e.preventDefault();
+        if (audioRef.current) {
+          if (audioRef.current.paused) {
+            audioRef.current.play().catch(() => {});
+          } else {
+            audioRef.current.pause();
+          }
+        }
       }
-    }} style={{position: 'absolute', width: '1px', height: '1px', overflow: 'hidden'}}>
-      {/* Hidden element to help with audio playback */}
-    </div>
-  );
+      
+      // Arrow Up/Down for volume
+      if (e.key === 'ArrowUp' && audioRef.current) {
+        e.preventDefault();
+        audioRef.current.volume = Math.min(audioRef.current.volume + 0.1, 1.0);
+      }
+      
+      if (e.key === 'ArrowDown' && audioRef.current) {
+        e.preventDefault();
+        audioRef.current.volume = Math.max(audioRef.current.volume - 0.1, 0);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying]);
+  
+  // Export loading state 
+  return null;
 };
 
-export default MeditationAudio;
+export default React.memo(MeditationAudio); // Memoize component to prevent unnecessary re-renders
  
