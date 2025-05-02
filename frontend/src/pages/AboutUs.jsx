@@ -74,13 +74,13 @@ const AboutUs = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                 </svg>
-                Raj Shivdas Khairnar (PRN 4422001819)
+                Raj Shivdas Khairnar (PRN: 4422001819)
               </li>
               <li className="text-gray-600 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                 </svg>
-                Kunal Shivaji Gaikwad (PRN 4422001829)
+                Kunal Shivaji Gaikwad (PRN: 4422001829)
               </li>
             </ul>
           </div>

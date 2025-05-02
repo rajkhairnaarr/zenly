@@ -28,7 +28,6 @@ const AdminPanel = () => {
       title: 'Breathing Meditation',
       description: 'Focus on your breath to calm your mind and body.',
       duration: 5,
-      audioUrl: 'https://example.com/audio/breathing.mp3',
       category: 'breathing',
       type: 'in-app',
       isPremium: false,
@@ -39,7 +38,6 @@ const AdminPanel = () => {
       title: 'Body Scan',
       description: 'Gradually focus your attention on different parts of your body.',
       duration: 10,
-      audioUrl: 'https://example.com/audio/bodyscan.mp3',
       category: 'guided',
       type: 'in-app',
       isPremium: false,
@@ -50,7 +48,6 @@ const AdminPanel = () => {
     title: '',
     description: '',
     duration: 5,
-    audioUrl: '',
     category: 'guided',
     type: 'guided',
     isPremium: false
@@ -201,7 +198,6 @@ const AdminPanel = () => {
     const errors = {};
     if (!formData.title.trim()) errors.title = 'Title is required';
     if (!formData.description.trim()) errors.description = 'Description is required';
-    if (!formData.audioUrl.trim()) errors.audioUrl = 'Audio URL is required';
     if (formData.duration < 1) errors.duration = 'Duration must be at least 1 minute';
     
     setFormErrors(errors);
@@ -257,7 +253,6 @@ const AdminPanel = () => {
         title: '',
         description: '',
         duration: 5,
-        audioUrl: '',
         category: 'guided',
         type: 'guided',
         isPremium: false
@@ -272,7 +267,6 @@ const AdminPanel = () => {
       title: meditation.title,
       description: meditation.description,
       duration: meditation.duration,
-      audioUrl: meditation.audioUrl,
       category: meditation.category,
       type: meditation.type || 'guided',
       isPremium: meditation.isPremium
@@ -318,7 +312,6 @@ const AdminPanel = () => {
       title: '',
       description: '',
       duration: 5,
-      audioUrl: '',
       category: 'guided',
       type: 'guided',
       isPremium: false
@@ -653,18 +646,6 @@ const AdminPanel = () => {
                     placeholder="Describe this meditation"
                   ></textarea>
                   {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Audio URL</label>
-                  <input
-                    type="text"
-                    name="audioUrl"
-                    value={formData.audioUrl}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://example.com/audio.mp3"
-                  />
-                  {formErrors.audioUrl && <p className="text-red-500 text-xs mt-1">{formErrors.audioUrl}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
