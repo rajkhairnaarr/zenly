@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // Sound sources with softer, more meditation-friendly tones
 const SOUND_SOURCES = {

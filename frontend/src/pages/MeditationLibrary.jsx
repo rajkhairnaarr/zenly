@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import axios from 'axios';
 import BreathingVisualizer from '../components/BreathingVisualizer';
 import BreathingSettings from '../components/BreathingSettings';
