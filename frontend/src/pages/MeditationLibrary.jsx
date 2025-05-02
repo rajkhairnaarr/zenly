@@ -21,7 +21,7 @@ const MeditationLibrary = () => {
     playBackgroundSound: true,
     soundType: 'bells',
     backgroundSoundType: 'nature',
-    volume: 0.5
+    volume: 0.8
   });
   const [isStartSoundPlaying, setIsStartSoundPlaying] = useState(false);
   const [isBackgroundSoundPlaying, setIsBackgroundSoundPlaying] = useState(false);
@@ -428,7 +428,7 @@ const MeditationLibrary = () => {
             <MeditationAudio 
               isPlaying={isBackgroundSoundPlaying}
               soundType={audioSettings.backgroundSoundType}
-              volume={audioSettings.volume * 0.7} // Slightly lower volume for background
+              volume={audioSettings.volume * 0.85}
             />
             
             {activeSession.type === 'in-app' && (

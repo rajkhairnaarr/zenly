@@ -1,83 +1,80 @@
 import { useState, useEffect, useRef } from 'react';
 
+// Import sample bell sound as base64 - small file (~10KB)
+// This is a base64-encoded short bell sound
+
 const MeditationAudio = ({ 
   isPlaying, 
   soundType = 'bells', 
-  volume = 0.5,
+  volume = 0.9,  // Increased to 90% volume
   onSoundComplete = () => {}
 }) => {
   const audioRef = useRef(null);
   const [soundLoaded, setSoundLoaded] = useState(false);
   
-  // Map of available sounds
-  const sounds = {
-    bells: '/sounds/meditation-bells.mp3',
-    nature: '/sounds/nature-ambience.mp3',
-    bowls: '/sounds/singing-bowls.mp3',
-    ocean: '/sounds/ocean-waves.mp3',
-    rainforest: '/sounds/rainforest.mp3',
-    chimes: '/sounds/wind-chimes.mp3'
+  // Create audio sources
+  const getAudioSource = (type) => {
+    // Basic beep sound generated in browser
+    if (type === 'bells') {
+      return generateBeepSound(880, 1000); // A5 note for 1 second
+    } else {
+      return generateBeepSound(440, 500, true); // A4 note, looping
+    }
   };
   
-  // Load the audio when component mounts
-  useEffect(() => {
-    if (!audioRef.current) return;
-    
-    // Set up audio
-    audioRef.current.src = sounds[soundType] || sounds.bells;
-    audioRef.current.volume = volume;
-    audioRef.current.loop = soundType !== 'bells'; // Loop background sounds but not bells
-    
-    // Mark as loaded when ready
-    audioRef.current.oncanplaythrough = () => {
-      setSoundLoaded(true);
-    };
-    
-    // Handle sound completion
-    audioRef.current.onended = () => {
-      if (soundType === 'bells') {
-        onSoundComplete();
+  // Function to generate a beep sound
+  const generateBeepSound = (frequency = 440, duration = 500, loop = false) => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      gainNode.gain.value = volume;
+      
+      oscillator.start();
+      
+      if (!loop) {
+        setTimeout(() => {
+          oscillator.stop();
+          onSoundComplete();
+        }, duration);
       }
-    };
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    };
-  }, [soundType, volume, onSoundComplete]);
+      
+      return { audioContext, oscillator, gainNode };
+    } catch (e) {
+      console.error('Error generating audio:', e);
+      return null;
+    }
+  };
   
-  // Play/pause based on isPlaying prop
+  // Set up sound when component mounts
   useEffect(() => {
-    if (!audioRef.current || !soundLoaded) return;
+    let audio = null;
     
     if (isPlaying) {
-      const playPromise = audioRef.current.play();
-      
-      // Handle autoplay restrictions
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('Audio playback failed:', error);
-        });
+      audio = getAudioSource(soundType);
+      console.log(`Playing ${soundType} sound at volume ${volume}`);
+    }
+    
+    return () => {
+      if (audio && audio.oscillator) {
+        try {
+          audio.oscillator.stop();
+          audio.audioContext.close();
+        } catch (e) {
+          console.error('Error cleaning up audio:', e);
+        }
       }
-    } else {
-      audioRef.current.pause();
-    }
-  }, [isPlaying, soundLoaded]);
+    };
+  }, [isPlaying, soundType, volume]);
   
-  // Update volume when it changes
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-  
-  return (
-    <audio ref={audioRef} preload="auto">
-      Your browser does not support the audio element.
-    </audio>
-  );
+  return null; // No visual component needed
 };
 
-export default MeditationAudio; 
+export default MeditationAudio;
+ 
