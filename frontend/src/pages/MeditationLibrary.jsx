@@ -21,7 +21,7 @@ const MeditationLibrary = () => {
     playBackgroundSound: true,
     soundType: 'bells',
     backgroundSoundType: 'nature',
-    volume: 0.8
+    volume: 1.0  // Maximum volume
   });
   const [isStartSoundPlaying, setIsStartSoundPlaying] = useState(false);
   const [isBackgroundSoundPlaying, setIsBackgroundSoundPlaying] = useState(false);
@@ -431,6 +431,18 @@ const MeditationLibrary = () => {
               volume={audioSettings.volume * 0.85}
             />
             
+            {/* Sound Indicator - visual feedback that sound is playing */}
+            {(isStartSoundPlaying || isBackgroundSoundPlaying) && (
+              <div className="mb-4 flex items-center justify-center">
+                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                  </svg>
+                  <span>{isStartSoundPlaying ? "Bell Sound Playing" : "Ambient Sound Playing"}</span>
+                </div>
+              </div>
+            )}
+            
             {activeSession.type === 'in-app' && (
               <div className="mb-8">
                 <BreathingVisualizer 
@@ -445,7 +457,7 @@ const MeditationLibrary = () => {
                       <h3 className="text-lg font-medium text-gray-900 mb-3">Sound Settings</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-700">Start Sound</span>
+                          <span className="text-gray-700">Start Sound (Bell)</span>
                           <label className="inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
@@ -493,15 +505,48 @@ const MeditationLibrary = () => {
                           <label className="block text-sm font-medium text-gray-700">
                             Volume: {Math.round(audioSettings.volume * 100)}%
                           </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={audioSettings.volume}
-                            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                          />
+                          <div className="flex items-center space-x-2">
+                            <button 
+                              onClick={() => handleVolumeChange(Math.max(0, audioSettings.volume - 0.1))}
+                              className="bg-gray-200 p-1 rounded-full"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.1"
+                              value={audioSettings.volume}
+                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            />
+
+                            <button 
+                              onClick={() => handleVolumeChange(Math.min(1, audioSettings.volume + 0.1))}
+                              className="bg-gray-200 p-1 rounded-full"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <button
+                            onClick={() => {
+                              // Test sound button - plays a short bell sound
+                              setIsStartSoundPlaying(true);
+                              setTimeout(() => setIsStartSoundPlaying(false), 2000);
+                            }}
+                            className="bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600"
+                          >
+                            Test Sound
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -525,9 +570,23 @@ const MeditationLibrary = () => {
                     </button>
                     <button
                       onClick={() => toggleSound('background')}
-                      className="text-sm text-primary-600 hover:text-primary-800"
+                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm rounded-md text-white bg-primary-600 hover:bg-primary-700"
                     >
-                      {isBackgroundSoundPlaying ? "Mute Sound" : "Unmute Sound"}
+                      {isBackgroundSoundPlaying ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          Mute
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          Unmute
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
