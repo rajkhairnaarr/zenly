@@ -360,9 +360,17 @@ const MeditationLibrary = () => {
 
   const endSession = () => {
     if (confirm('Are you sure you want to end this meditation session?')) {
-      setActiveSession(null);
+      // Stop all audio playback immediately
+      // We need to set the audio playing states to false first and then 
+      // clear the session with a small delay to ensure audio stops completely
       setIsStartSoundPlaying(false);
       setIsBackgroundSoundPlaying(false);
+      
+      // Use a very short timeout to ensure state updates propagate
+      // before we reset the active session
+      setTimeout(() => {
+        setActiveSession(null);
+      }, 50);
     }
   };
 

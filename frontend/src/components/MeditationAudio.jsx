@@ -13,7 +13,7 @@ const SOUND_SOURCES = {
   chimes: 'https://freesound.org/data/previews/257/257807_4202572-lq.mp3'  // Soft wind chimes
 };
 
-// Use AudioContext to create smoother sounds
+// Use AudioContext to create smoother sounds with proper cleanup
 const createAudioTone = (frequency, duration, volume) => {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -34,11 +34,38 @@ const createAudioTone = (frequency, duration, volume) => {
     
     // Start and schedule stop with fade out
     oscillator.start();
-    gainNode.gain.setValueAtTime(volume, audioContext.currentTime + duration - 0.2);
-    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
-    oscillator.stop(audioContext.currentTime + duration);
     
-    return { oscillator, gainNode, audioContext };
+    // For finite durations, set up stop timing
+    if (isFinite(duration)) {
+      gainNode.gain.setValueAtTime(volume, audioContext.currentTime + duration - 0.2);
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+      oscillator.stop(audioContext.currentTime + duration);
+    }
+    
+    // Add a cleanup method for immediate stopping
+    const cleanup = () => {
+      try {
+        // Immediate fade out over 50ms
+        const now = audioContext.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.05);
+        
+        // Stop oscillator after fade out
+        setTimeout(() => {
+          try {
+            oscillator.stop();
+            audioContext.close().catch(() => {});
+          } catch (err) {
+            // Already stopped
+          }
+        }, 60);
+      } catch (e) {
+        console.error("Error stopping audio tone:", e);
+      }
+    };
+    
+    return { oscillator, gainNode, audioContext, cleanup };
   } catch (e) {
     console.error('Could not create audio tone:', e);
     return null;
@@ -75,17 +102,32 @@ const MeditationAudio = ({
   
   // Memoized cleanup function to prevent recreating on every render
   const cleanupAudio = useCallback(() => {
+    // Enhanced immediate cleanup
     if (audioRef.current) {
-      audioRef.current.pause();
-      if (audioRef.current.src) {
-        audioRef.current.src = '';
-        audioRef.current.load();
+      // Force immediate pause and remove source
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0; // Reset playback position
+        audioRef.current.src = ''; // Clear source
+        audioRef.current.remove(); // Remove element from memory
+        audioRef.current = null;
+      } catch (e) {
+        console.error('Error during audio cleanup:', e);
       }
     }
     
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
+      try {
+        // For Web Audio API fallback
+        if (audioContextRef.current.cleanup) {
+          audioContextRef.current.cleanup();
+        } else {
+          audioContextRef.current.close().catch(() => {});
+        }
+        audioContextRef.current = null;
+      } catch (e) {
+        console.error('Error during audio context cleanup:', e);
+      }
     }
   }, []);
 
@@ -144,7 +186,7 @@ const MeditationAudio = ({
         }
         
         if (tone) {
-          audioContextRef.current = tone.audioContext;
+          audioContextRef.current = tone;  // Store the whole tone object for proper cleanup
         }
       };
       
@@ -164,7 +206,7 @@ const MeditationAudio = ({
             : createAudioTone(196, Infinity, volume * 0.5);
             
           if (tone) {
-            audioContextRef.current = tone.audioContext;
+            audioContextRef.current = tone;
             if (soundType === 'bells') {
               setTimeout(onSoundComplete, 3000);
             }
@@ -188,16 +230,18 @@ const MeditationAudio = ({
     }
   }, [volume]);
   
-  // Handle play/pause based on isPlaying state
+  // Handle play/pause based on isPlaying state with improved cleanup
   useEffect(() => {
     if (isPlaying) {
       playAudio();
     } else {
+      // Immediate cleanup when playback stops
       cleanupAudio();
       setIsLoading(false);
       if (onLoadingChange) onLoadingChange(false);
     }
     
+    // Always ensure cleanup on unmount
     return () => {
       cleanupAudio();
       setIsLoading(false);
