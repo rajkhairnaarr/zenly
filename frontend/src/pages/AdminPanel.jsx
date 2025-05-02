@@ -113,7 +113,7 @@ const AdminPanel = () => {
       // Ensure we have an array of users
       if (Array.isArray(res.data) && res.data.length > 0) {
         console.log(`Loaded ${res.data.length} users from API`);
-        setUsers(res.data);
+      setUsers(res.data);
       } else {
         console.warn('API returned empty or invalid user data, using fallback data');
         // Keep using fallback data from initial state
@@ -580,26 +580,26 @@ const AdminPanel = () => {
                         <tr key={formattedUser.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{formattedUser.name}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">{formattedUser.email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               formattedUser.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
+                        }`}>
                               {formattedUser.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
                               onClick={() => toggleUserRole(formattedUser.id, formattedUser.role)}
-                              className="text-primary-600 hover:text-primary-900"
-                            >
+                          className="text-primary-600 hover:text-primary-900"
+                        >
                               {formattedUser.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
-                            </button>
-                          </td>
-                        </tr>
+                        </button>
+                      </td>
+                    </tr>
                       );
                     })
                   )}
@@ -720,8 +720,8 @@ const AdminPanel = () => {
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
                   >
                     {editingId ? 'Update' : 'Add'} Meditation
-                  </button>
-                </div>
+                </button>
+              </div>
               </form>
             </div>
 
@@ -781,7 +781,7 @@ const AdminPanel = () => {
                               className="text-red-600 hover:text-red-900"
                             >
                               Delete
-                            </button>
+                </button>
                           </td>
                         </tr>
                       ))
