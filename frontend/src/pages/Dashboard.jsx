@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, lazy, Suspense } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import {
@@ -14,6 +14,46 @@ import {
 // Define a variable at global scope to avoid unintentional shadowing
 // This will also help catch any references to an undefined global
 const defaultUserName = 'User';
+
+// Memoized stat card component for performance
+const StatCard = memo(({ icon: Icon, emoji, count, label, bgColor, iconColor, borderColor }) => (
+  <div className={`rounded-xl ${bgColor} p-6 shadow-sm border ${borderColor}`}>
+    <div className="flex justify-between">
+      <Icon className={`h-10 w-10 ${iconColor}`} />
+      <div className="text-3xl">{emoji}</div>
+    </div>
+    <p className="mt-4 text-3xl font-bold text-gray-900">{count}</p>
+    <p className="mt-1 text-sm text-gray-600">{label}</p>
+  </div>
+));
+
+// Memoized feature card component
+const FeatureCard = memo(({ feature }) => (
+  <Link
+    to={feature.link}
+    className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 hover:border-primary-500 hover:shadow-lg transition-all"
+  >
+    <div className="absolute right-0 top-0 h-24 w-24 -mr-8 -mt-8 rounded-full opacity-10 bg-primary-500 group-hover:bg-primary-600 transition-colors"></div>
+    
+    <div className={`inline-flex rounded-lg ${feature.color} p-3`}>
+      <feature.icon className={`h-6 w-6 ${feature.iconColor}`} />
+    </div>
+    
+    <div className="absolute right-6 bottom-6 text-4xl opacity-30 group-hover:opacity-100 group-hover:scale-110 transition-all">
+      {feature.image}
+    </div>
+    
+    <h3 className="mt-4 text-lg font-medium text-gray-900">
+      {feature.name}
+    </h3>
+    <p className="mt-2 text-sm text-gray-600 max-w-[80%]">{feature.description}</p>
+    
+    <div className="mt-4 inline-flex items-center text-sm font-medium text-primary-600 group-hover:text-primary-700">
+      <span>Get started</span>
+      <ArrowRightIcon className="ml-1 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+    </div>
+  </Link>
+));
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -161,41 +201,45 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        <div className="rounded-xl bg-green-50 p-6 shadow-sm border border-green-100">
-          <div className="flex justify-between">
-            <CalendarDaysIcon className="h-10 w-10 text-green-500" />
-            <div className="text-3xl">🔥</div>
-          </div>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{stats.streak}</p>
-          <p className="mt-1 text-sm text-gray-600">Day Streak</p>
-        </div>
+        <StatCard 
+          icon={CalendarDaysIcon} 
+          emoji="🔥" 
+          count={stats.streak} 
+          label="Day Streak"
+          bgColor="bg-green-50" 
+          iconColor="text-green-500" 
+          borderColor="border-green-100"
+        />
         
-        <div className="rounded-xl bg-purple-50 p-6 shadow-sm border border-purple-100">
-          <div className="flex justify-between">
-            <BookOpenIcon className="h-10 w-10 text-purple-500" />
-            <div className="text-3xl">🧘</div>
-          </div>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{stats.meditationCount}</p>
-          <p className="mt-1 text-sm text-gray-600">Meditations</p>
-        </div>
+        <StatCard 
+          icon={BookOpenIcon} 
+          emoji="🧘" 
+          count={stats.meditationCount} 
+          label="Meditations"
+          bgColor="bg-purple-50" 
+          iconColor="text-purple-500" 
+          borderColor="border-purple-100"
+        />
         
-        <div className="rounded-xl bg-blue-50 p-6 shadow-sm border border-blue-100">
-          <div className="flex justify-between">
-            <PencilSquareIcon className="h-10 w-10 text-blue-500" />
-            <div className="text-3xl">📝</div>
-          </div>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{stats.journalCount}</p>
-          <p className="mt-1 text-sm text-gray-600">Journal Entries</p>
-        </div>
+        <StatCard 
+          icon={PencilSquareIcon} 
+          emoji="📝" 
+          count={stats.journalCount} 
+          label="Journal Entries"
+          bgColor="bg-blue-50" 
+          iconColor="text-blue-500" 
+          borderColor="border-blue-100"
+        />
         
-        <div className="rounded-xl bg-rose-50 p-6 shadow-sm border border-rose-100">
-          <div className="flex justify-between">
-            <HeartIcon className="h-10 w-10 text-rose-500" />
-            <div className="text-3xl">😊</div>
-          </div>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{stats.moodCount}</p>
-          <p className="mt-1 text-sm text-gray-600">Mood Entries</p>
-        </div>
+        <StatCard 
+          icon={HeartIcon} 
+          emoji="😊" 
+          count={stats.moodCount} 
+          label="Mood Entries"
+          bgColor="bg-rose-50" 
+          iconColor="text-rose-500" 
+          borderColor="border-rose-100"
+        />
       </div>
 
       {/* Feature Cards */}
@@ -203,31 +247,7 @@ const Dashboard = () => {
         <h2 className="mb-6 text-2xl font-bold text-gray-900">Your Wellness Tools</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {features.map((feature) => (
-            <Link
-              key={feature.name}
-              to={feature.link}
-              className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 hover:border-primary-500 hover:shadow-lg transition-all"
-            >
-              <div className="absolute right-0 top-0 h-24 w-24 -mr-8 -mt-8 rounded-full opacity-10 bg-primary-500 group-hover:bg-primary-600 transition-colors"></div>
-              
-              <div className={`inline-flex rounded-lg ${feature.color} p-3`}>
-                <feature.icon className={`h-6 w-6 ${feature.iconColor}`} />
-              </div>
-              
-              <div className="absolute right-6 bottom-6 text-4xl opacity-30 group-hover:opacity-100 group-hover:scale-110 transition-all">
-                {feature.image}
-              </div>
-              
-              <h3 className="mt-4 text-lg font-medium text-gray-900">
-                {feature.name}
-              </h3>
-              <p className="mt-2 text-sm text-gray-600 max-w-[80%]">{feature.description}</p>
-              
-              <div className="mt-4 inline-flex items-center text-sm font-medium text-primary-600 group-hover:text-primary-700">
-                <span>Get started</span>
-                <ArrowRightIcon className="ml-1 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+            <FeatureCard key={feature.name} feature={feature} />
           ))}
         </div>
       </div>
@@ -251,13 +271,11 @@ const Dashboard = () => {
               </Link>
             </div>
           </div>
-          <div className="hidden md:block text-7xl">
-            🧘‍♂️
-          </div>
+          <div className="hidden sm:block text-6xl">🌿</div>
         </div>
       </div>
     </div>
   );
 };
 
-export default Dashboard; 
+export default memo(Dashboard); 
