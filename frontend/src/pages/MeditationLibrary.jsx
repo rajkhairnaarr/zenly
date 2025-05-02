@@ -100,13 +100,6 @@ const MeditationLibrary = () => {
       duration: "25:00"
     },
     {
-      id: "wruCWicGBA4",
-      title: "Nature Sounds Meditation",
-      description: "Relax with calming nature sounds in this 15-minute guided meditation.",
-      thumbnail: `https://img.youtube.com/vi/wruCWicGBA4/mqdefault.jpg`,
-      duration: "15:00"
-    },
-    {
       id: "EwQkfoKxjuo",
       title: "Body Awareness Meditation",
       description: "A 12-minute meditation to increase awareness of bodily sensations.",
@@ -179,13 +172,6 @@ const MeditationLibrary = () => {
       "Place one hand over your heart and breathe deeply into this area.",
       "With each exhale, imagine releasing stress and tension.",
       "Feel a sense of gratitude and appreciation growing with each breath."
-    ],
-    "5": [
-      "Close your eyes and draw your attention to sounds around you.",
-      "Notice each sound without judgment, simply observing.",
-      "Gradually narrow your focus to sounds closest to you.",
-      "Then bring awareness to the sound of your own breath.",
-      "Finally, notice the subtle sounds of silence between breaths."
     ],
     "6": [
       "Begin by focusing on the sensation of your feet touching the ground.",
@@ -300,13 +286,6 @@ const MeditationLibrary = () => {
           title: 'Gratitude Meditation',
           description: 'Cultivate appreciation and thankfulness for life\'s blessings.',
           duration: 8,
-          type: 'in-app'
-        },
-        {
-          _id: '5',
-          title: 'Sound Awareness',
-          description: 'Develop mindfulness by focusing on the sounds around you.',
-          duration: 7,
           type: 'in-app'
         },
         {
