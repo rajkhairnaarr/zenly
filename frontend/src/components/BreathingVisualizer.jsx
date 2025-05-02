@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 
 const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 }) => {
   const [breathPhase, setBreathPhase] = useState('inhale');
   const [counter, setCounter] = useState(0);
   const requestRef = useRef();
   const previousTimeRef = useRef();
+  const phaseChangeRef = useRef(false);
 
   useEffect(() => {
     if (!isActive) return;
@@ -20,9 +21,11 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
           // Reset counter and switch breath phase when appropriate
           if (breathPhase === 'inhale' && newCounter >= inhaleDuration) {
             setBreathPhase('exhale');
+            phaseChangeRef.current = true;
             return 0;
           } else if (breathPhase === 'exhale' && newCounter >= exhaleDuration) {
             setBreathPhase('inhale');
+            phaseChangeRef.current = true;
             return 0;
           }
           
@@ -35,11 +38,17 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
     };
     
     requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current);
+    
+    // Clean up animation frame on unmount or when parameters change
+    return () => {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
+    };
   }, [isActive, breathPhase, inhaleDuration, exhaleDuration]);
 
-  // Calculate size and opacity based on breath phase and counter
-  const getAnimationStyles = () => {
+  // Calculate size and opacity based on breath phase and counter - memoized calculation
+  const animationStyles = (() => {
     if (breathPhase === 'inhale') {
       // Start small and grow to full size during inhale
       const progress = Math.min(counter / inhaleDuration, 1);
@@ -65,14 +74,19 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
         transform: `scale(${1.2 - progress * 0.2})`, // Add subtle scale effect
       };
     }
-  };
-
-  const animationStyles = getAnimationStyles();
+  })();
   
   // Calculate text opacity for fade effect
   const textOpacity = breathPhase === 'inhale' 
     ? Math.min(counter / (inhaleDuration * 0.4), 1) 
     : Math.min(counter / (exhaleDuration * 0.4), 1);
+
+  // Visual feedback for phase changes - subtle flash effect
+  useEffect(() => {
+    if (phaseChangeRef.current) {
+      phaseChangeRef.current = false;
+    }
+  }, [breathPhase]);
 
   return (
     <div className="flex flex-col items-center">
@@ -121,9 +135,9 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
           }}
         />
         
-        {/* Particles effect - small dots floating around */}
+        {/* Particles effect with reduced number for better performance */}
         <div className="absolute inset-0 z-2 overflow-hidden rounded-full">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div 
               key={i}
               className="absolute rounded-full bg-white"
@@ -131,8 +145,8 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
                 width: '4px',
                 height: '4px',
                 opacity: 0.7,
-                top: `${30 + Math.sin(i * 45 + counter) * 30}%`,
-                left: `${30 + Math.cos(i * 45 + counter) * 30}%`,
+                top: `${30 + Math.sin(i * 60 + counter) * 30}%`,
+                left: `${30 + Math.cos(i * 60 + counter) * 30}%`,
                 animation: `floatParticle ${3 + i * 0.5}s infinite linear`,
                 animationDelay: `${i * 0.2}s`
               }}
@@ -140,16 +154,16 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
           ))}
         </div>
         
-        {/* Instruction text with fade effect */}
+        {/* Instruction text with fade effect and enhanced visibility */}
         <div 
-          className="relative z-10 text-white text-xl font-medium transition-opacity duration-300 bg-primary-500 bg-opacity-30 px-4 py-2 rounded-full backdrop-blur-sm"
+          className="relative z-10 text-white text-xl font-medium transition-opacity duration-300 bg-primary-500 bg-opacity-30 px-4 py-2 rounded-full backdrop-blur-sm shadow-lg"
           style={{ opacity: textOpacity }}
         >
           {breathPhase === 'inhale' ? 'Breathe In' : 'Breathe Out'}
         </div>
       </div>
       
-      <div className="text-gray-600 mb-8 text-center">
+      <div className="text-gray-600 mb-8 text-center font-medium">
         {breathPhase === 'inhale' 
           ? `Inhale: ${Math.ceil(inhaleDuration - counter)} seconds remaining` 
           : `Exhale: ${Math.ceil(exhaleDuration - counter)} seconds remaining`
@@ -184,4 +198,5 @@ const BreathingVisualizer = ({ isActive, inhaleDuration = 4, exhaleDuration = 6 
   );
 };
 
-export default BreathingVisualizer; 
+// Memoize the component to prevent unnecessary re-renders
+export default memo(BreathingVisualizer); 

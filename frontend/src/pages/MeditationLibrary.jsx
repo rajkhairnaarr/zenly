@@ -1,8 +1,43 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import axios from 'axios';
 import BreathingVisualizer from '../components/BreathingVisualizer';
 import BreathingSettings from '../components/BreathingSettings';
-import { CalendarIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+
+// Memoize the session instruction component for better performance
+const SessionInstruction = memo(({ instruction }) => (
+  <div className="text-xl text-center text-gray-700 mb-8 max-w-md">
+    {instruction}
+  </div>
+));
+
+// Memoize the meditation card component
+const MeditationCard = memo(({ meditation, onStart }) => (
+  <div className="bg-white shadow rounded-lg overflow-hidden group hover:shadow-lg transition-all">
+    <div className="p-6">
+      <div className="text-center mb-4">
+        <span className="inline-block p-3 rounded-full bg-primary-100 text-primary-600">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        </span>
+      </div>
+      <h3 className="text-xl font-semibold text-gray-900 text-center">{meditation.title}</h3>
+      <p className="mt-3 text-gray-600 text-center">{meditation.description}</p>
+      <div className="mt-6 border-t border-gray-100 pt-4 flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-500">
+          {meditation.duration} minutes
+        </span>
+        <button
+          onClick={() => onStart(meditation)}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors group-hover:scale-105 transform duration-200"
+        >
+          Start
+        </button>
+      </div>
+    </div>
+  </div>
+));
 
 const MeditationLibrary = () => {
   const [meditations, setMeditations] = useState([]);
@@ -17,6 +52,9 @@ const MeditationLibrary = () => {
     exhaleDuration: 6
   });
   const [dailySuggestion, setDailySuggestion] = useState(null);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const timerRef = useRef(null);
 
   const guidedMeditations = [
     {
@@ -195,10 +233,15 @@ const MeditationLibrary = () => {
     fetchMeditations();
   }, [getDailySuggestion]);
 
+  // Optimized timer implementation with useRef to prevent memory leaks
   useEffect(() => {
-    let timer;
+    // Clean up any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
     if (activeSession && timeRemaining > 0) {
-      timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setTimeRemaining(prev => prev - 1);
         
         // Change instruction every minute
@@ -208,13 +251,19 @@ const MeditationLibrary = () => {
       }, 1000);
     } else if (timeRemaining === 0 && activeSession) {
       // Session complete
-      setTimeout(() => {
-        alert('Meditation session complete. How do you feel?');
+      setSessionCompleted(true);
+      timerRef.current = setTimeout(() => {
         setActiveSession(null);
-      }, 1000);
+        setSessionCompleted(false);
+      }, 3000);
     }
     
-    return () => clearTimeout(timer);
+    // Clean up timer on unmount
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [activeSession, timeRemaining, sessionStep]);
 
   const fetchMeditations = async () => {
@@ -289,17 +338,28 @@ const MeditationLibrary = () => {
 
   const startMeditation = async (meditation) => {
     try {
+      setSessionStarted(true); // Show starting animation
+      
       const backendPort = localStorage.getItem('backendPort') || '5001';
       await axios.post(`http://localhost:${backendPort}/api/meditations/${meditation._id}/start`);
-      setActiveSession(meditation);
-      setTimeRemaining(meditation.duration * 60);
-      setSessionStep(0);
+      
+      // Delay to show starting animation
+      setTimeout(() => {
+        setActiveSession(meditation);
+        setTimeRemaining(meditation.duration * 60);
+        setSessionStep(0);
+        setSessionStarted(false);
+      }, 1000);
     } catch (err) {
       console.error('Error starting meditation:', err);
+      
       // Provide fallback behavior when backend is not available
-      setActiveSession(meditation);
-      setTimeRemaining(meditation.duration * 60);
-      setSessionStep(0);
+      setTimeout(() => {
+        setActiveSession(meditation);
+        setTimeRemaining(meditation.duration * 60);
+        setSessionStep(0);
+        setSessionStarted(false);
+      }, 1000);
     }
   };
 
@@ -318,7 +378,10 @@ const MeditationLibrary = () => {
   };
 
   const endSession = () => {
-    if (confirm('Are you sure you want to end this meditation session?')) {
+    if (window.confirm('Are you sure you want to end this meditation session?')) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
       setActiveSession(null);
     }
   };
@@ -327,6 +390,44 @@ const MeditationLibrary = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  // Session starting animation
+  if (sessionStarted && !activeSession) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden p-8">
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center animate-pulse">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-800">Preparing Your Meditation</h2>
+            <p className="text-gray-600 text-center">
+              Find a comfortable position and prepare to begin...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Session completion screen
+  if (sessionCompleted && !activeSession) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden p-8">
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <CheckCircleIcon className="h-24 w-24 text-green-500" />
+            <h2 className="text-2xl font-semibold text-gray-800">Meditation Complete</h2>
+            <p className="text-gray-600 text-center">
+              Well done! Take a moment to notice how you feel.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -390,9 +491,7 @@ const MeditationLibrary = () => {
               </div>
             )}
             
-            <div className="text-xl text-center text-gray-700 mb-8 max-w-md">
-              {currentInstruction}
-            </div>
+            <SessionInstruction instruction={currentInstruction} />
             
             <div className="text-sm text-gray-500 italic text-center">
               Focus on your breath and let go of any distractions.
@@ -412,7 +511,7 @@ const MeditationLibrary = () => {
         </p>
       </div>
       
-      {/* Daily Suggestion - Add this before the meditation list */}
+      {/* Daily Suggestion */}
       {!activeSession && dailySuggestion && (
         <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 shadow-sm border border-indigo-100">
           <div className="flex items-center justify-between">
@@ -496,30 +595,11 @@ const MeditationLibrary = () => {
         <h2 className="text-2xl font-semibold text-gray-900 mb-6">In-App Meditations</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {meditations.map((meditation) => (
-            <div key={meditation._id} className="bg-white shadow rounded-lg overflow-hidden group hover:shadow-lg transition-all">
-              <div className="p-6">
-                <div className="text-center mb-4">
-                  <span className="inline-block p-3 rounded-full bg-primary-100 text-primary-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 text-center">{meditation.title}</h3>
-                <p className="mt-3 text-gray-600 text-center">{meditation.description}</p>
-                <div className="mt-6 border-t border-gray-100 pt-4 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">
-                    {meditation.duration} minutes
-                  </span>
-                  <button
-                    onClick={() => startMeditation(meditation)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors group-hover:scale-105 transform duration-200"
-                  >
-                    Start
-                  </button>
-                </div>
-              </div>
-            </div>
+            <MeditationCard 
+              key={meditation._id} 
+              meditation={meditation}
+              onStart={startMeditation}
+            />
           ))}
         </div>
       </div>
