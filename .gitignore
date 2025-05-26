@@ -9,6 +9,7 @@ node_modules
 
 # System files
 .DS_Store
+**/.DS_Store
 
 # Cache files
 **/.cache/
